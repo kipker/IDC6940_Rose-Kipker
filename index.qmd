@@ -21,37 +21,22 @@ editor:
 Slides: [slides.html](slides.html){target="_blank"} ( Go to `slides.qmd`
 to edit)
 
-::: callout-important
-**Remember:** Your goal is to make your audience understand and care
-about your findings. By crafting a compelling story, you can effectively
-communicate the value of your data science project.
-
-Carefully read this template since it has instructions and tips to
-writing!
-
-Nice report!
-:::
 
 ## Introduction
 
-Insert interesting hook from Elizabeth's research... In a world filled with intense socio-economic and geo-political strife, it is no wonder that the people of the planet are facing the mental health crisis of the millennium. The temptation to escape or even just cope is one many cannot overcome. This is the "Information age"-- perhaps a more appropriate title: the over-information age. Whether the pressure arises from forces external: employment, bills, family, or from within, Dr. Reddit and TikTok therapists are quick to offer up the next "hack" for your body or mind. Drugs to solve any problem abound, a person is spoiled for choice... but what choice will a person make?
+In an era plagued with a severe mental health crisis accelerated by both socioeconomic strife and the cognitive overload of the information age, the temptation to cope or escape can be compelling. As individuals attempt to navigate the current global landscape, many seek assistance from unregulated sources online, such as social media, frequently leading to self-diagnosis and self-medication. This access to “over-information” and a wide variety of ever-evolving psychoactive substances available have essentially left individuals overwhelmed by choice. Consequently, a critical behavioral question remains: what innate factors influence an individual’s substance of choice?
 
-Can we capture this information and utilize it in constructively? What if we used this to ease the human condition instead of criminalize it?
+To investigate this phenomenon, research conducted by Fehrman et al. explored individual’s risk for drug consumption using a dataset collected via an online survey. Administered over a 12-month period, the survey resulted in usable data from 1,885 participants across a range of English-speaking nations including the United Kingdom, the United States, Canada, Australia, New Zealand, and Ireland. In addition to collecting information regarding the use of 18 legal and illegal drugs, the survey collected demographic metrics, such as education level and race, as well as their personality traits.
 
-The dataset we have chosen to model is: 
 
-We deigned to design a model that can be used not only to predict what types of drugs a person might be inclined to use but also reflexively- this time using a person's "drug of choice" to inform them of potential underlying psychological conditions or challenges they may be able to seek proper pharmaceutical help to mitigate. The War on Drugs failed, its time to work smarter, not harder.  
+Personality traits were assessed using the Revised NEO Five-Factor Inventory (NEO-FFI-R). This method evaluates personalities based on scores across five core dimensions: neuroticism, extraversion, openness to experience, agreeableness, and conscientiousness (Costa PT, et al.). This dataset established by Fehrman et al. serves as the foundation for this study. This study attempts to model the complex relationship between personality profiles and an individual’s “drug of choice”, while simultaneously predicting substance risks by implementing both traditional Deep Neural Networks (DNNs), such as the multilayer perceptron, as well as Recurrent Neural Networks (RNNs). 
 
 
 <!-- -->
 
--   Introduce why it is relevant needs.
-
--   Provide an overview of your approach.
-
 What better tool to predict the decisions from a human brain than by an algorithm designed to work like one: the neural network. In our case, we explored both traditional Deep Neural Networks (DNNs) like multilayer perceptrons as well as Recurrent Neural Networks (RNNs). 
 
-The goal of a neural network has always been straightforward: make the computer work like a brain: a complex, multi-parallel system of individual processing units, "neurons". [@MontesinosLopez2022] The inception of the artificial neuron goes back as far as the early 1940's and the underlying mechanism has remained fundamentally unchanged since. Artificial Neural Networks (ANNs) of the era were "simple" consisting of input layer, activation layer, and output layer. The largest hurdle to be overcome being a lack of processing and optimizing ability. Due to these structure and computational limits, these models were only suited for "simpler" linear problems. *though honestly, constructing and executing a neural network in the 40s sounds to us as anything BUT simple* [@ekundayo2025deep] Neural networks enter  a period of stagnation until the year 1986 with the introduction of the "novel method" of back propagation.[@Rumelhart1986] Flash forward 40 years and the ANN has all but inundated all corners of data analysis. 
+The concept for the function of artificial neural networks (ANNs) has always been to replicate the processing methods of the brain: a complex, multi-parallel system of individual processing units called “neurons” [@MontesinosLopez2022]. While the inception of the artificial neuron dates back to the early 1940s, the underlying mechanism has remained fundamentally unchanged. Early iterations of ANNs were structurally simple, consisting of a single input layer, activation function, and an output layer. At the time, these models were operating with both structural and computational limitations, and as such were restricted to solving simpler, linearly separable problems [@ekundayo2025deep]. The field then experienced a prolonged period of stagnation until it ended abruptly in 1986 with the introduction of backpropagation. This optimization method allows networks to systematically and repeatedly adjust their weights across multiple hidden layers to minimize the difference between the actual output and the desired output [@Rumelhart1986]. In the decades since the popularization of backpropagation, advancements in computing power and data availability have accelerated the evolution of deep learning, to the point where ANNs have permeated virtually all corners of modern data analysis. 
 
 The appropriate "version" of ANN to select is largely based on the input data at hand. Are your data points depended on one another or dependent on time itself? An RNN is best suited to this processing. Do you intend to decipher and interpret imagery? Best look into CNNs. But why? And furthermore, what version should we use for this drug dataset? 
 
@@ -65,6 +50,10 @@ Traditional feed forward DNNs process data in a one way flow. A human brain, in 
 
 
 ## Methods
+
+
+discuss preprocessing, any modifications or supplements to the data in case of class imbalance or whatever 
+
 
 -   Detail the models or algorithms used.
 
