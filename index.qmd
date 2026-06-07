@@ -40,13 +40,16 @@ The concept for the function of artificial neural networks (ANNs) has always bee
 
 The appropriate "version" of ANN to select is largely based on the input data at hand. Are your data points depended on one another or dependent on time itself? An RNN is best suited to this processing. Do you intend to decipher and interpret imagery? Best look into CNNs. But why? And furthermore, what version should we use for this drug dataset? 
 
-EXPLAIN THE STRUCTURE OF A TRADITIONAL DNN
+The basic structure of an artificial neural network is described as having an input layer followed by hidden layers, then a final output layer. What distinguishes an ANN from a DNN is the number of hidden layers. 
 
-EXPLAIN THE STRUCTURE OF A TRADITIONAL RNN
+A convolutional nerual network processes patterned data (whether patterned as images or patterned by time or influence) through the inclusion of convolutional and pooling layers in order to identify features and compress the results. 
 
-EXPLAIN THE STRUCTURE OF A TRADITIONAL CNN
+How an RNN is different: the inclusion of "memory" by incorporating a hidden state. In a neural network of this structure, each layer is considering the current input and the memory of its past inputs. 
 
-Traditional feed forward DNNs process data in a one way flow. A human brain, in contrast is a highly interconnected network with feedback loops and memory, much like the structure of an RNN. Our model is attempting to replicate the function of the brain however, the data is completely comprised of continuous or categorical non-sequential observations. To rectify this incongruity and leave nary a stone unturned, we explored both a traditional DNN and an RNN.
+Consider processing the information stored in a book. A traditional DNN takes in all words simultaneously, a CNN scans random clusters of pages, and an RNN reads each word sequentially keeping the context of the inputs. 
+
+
+Traditional feed forward DNNs process data in a one way flow. A human brain, in contrast, is a highly interconnected network with feedback loops and memory, much like the structure of an RNN. Our model is attempting to replicate the function of the brain however, the data is completely composed of continuous or categorical non-sequential observations. To rectify this incongruity and leave nary a stone unturned, we explored both a traditional DNN and an RNN.
 
 
 ## Methods
