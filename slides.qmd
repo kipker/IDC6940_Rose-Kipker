@@ -1,7 +1,7 @@
 ---
-title: "Present a great story for data science projects"
-subtitle: "This is a Slide Template"
-author: "Students names (Advisor: Dr. Cohen)"
+title: "Predicting Drug Use Using Personailty Type and Pyschological Diagnoses- Summer 2026 "
+subtitle:  "A comparasion between RNN and DNN on non-sequential data"
+author: "Elizabeth Rose and Victoria Kipker (Advisor: Dr. Cohen)"
 date: '`r Sys.Date()`'
 format:
   revealjs
@@ -31,19 +31,8 @@ More information about `revealjs`:
 
 ## Introduction  {.smaller}
 
--   Develop a storyline that captures attention and maintains interest.
+In an era plagued with a severe mental health crisis accelerated by both socioeconomic strife and the cognitive overload of the information age, the temptation to cope or escape can be compelling. As individuals attempt to navigate the current global landscape, many seek assistance from unregulated sources online, such as social media, frequently leading to self-diagnosis and self-medication. This access to “over-information” and a wide variety of ever-evolving psychoactive substances available have essentially left individuals overwhelmed by choice. Consequently, a critical behavioral question remains: what innate factors influence an individual’s substance of choice?
 
--   Your audience is your peers
-
--   Clearly state the problem or question you're addressing.
-
--   Introduce why it is relevant needs.
-
--   Provide an overview of your approach.
-
-In kernel estimator, weight function is known as kernel function
-[@efr2008]. Cite this paper [@bro2014principal]. The GEE [@wang2014].
-The PCA [@daffertshofer2004pca]\*
 
 ## Methods
 
