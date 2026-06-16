@@ -21,6 +21,11 @@ editor:
 Slides: [slides.html](slides.html){target="_blank"} ( Go to `slides.qmd`
 to edit)
 
+<style>
+body {
+  text-align: justify;
+}
+</style>
 
 ## Introduction
 
