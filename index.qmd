@@ -62,6 +62,13 @@ Traditional feed forward DNNs process data in a one way flow. A human brain, in 
 
 discuss preprocessing, any modifications or supplements to the data in case of class imbalance or whatever 
 
+There were several preprocessing steps to make the data ready for the ANN model. We began by verifying that the data set did not need standardization. We then converted the drug columns (the targets) into a binary "user" or "non user" designation based on whether the participant has used this substance within the last year. The study also used a fake drug called "Semer" that was used to identify participants erroneously marking drugs not actually used. We omitted any instances in the dataset where a participant recorded use of "Semer" as accuracy of the remaining disclosed drugs used could not be verified. 
+
+We then convert the features into a numeric matrix. As the goal of our model is to predict drug use on personality and demographic responses and not the use of other drugs, we must remove the other drugs from the numeric feature matrix. 
+
+Before moving onto train/test splitting the data, a class imbalance between many drug classes was observed. Applying a randomized train/test split can compound this imbalance issue and impact the model so we used a composite profile score. By using this method, individuals that use more than one drug will be evenly distributed betweeen the train and test groups. 
+
+For preprocessing the data for RNN, we must convert the matrices used 
 
 -   Detail the models or algorithms used.
 
