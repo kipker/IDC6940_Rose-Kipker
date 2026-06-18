@@ -16,6 +16,7 @@ execute:
 editor: 
   markdown: 
     wrap: 72
+engine: knitr
 ---
 
 Slides: [slides.html](slides.html){target="_blank"} ( Go to `slides.qmd`
@@ -45,32 +46,14 @@ The concept for the function of artificial neural networks (ANNs) has always bee
 
 The appropriate "version" of ANN to select is largely based on the input data at hand. Are your data points depended on one another or dependent on time itself? An RNN is best suited to this processing. Do you intend to decipher and interpret imagery? Best look into CNNs. But why? And furthermore, what version should we use for this drug dataset? 
 
-The basic structure of an artificial neural network is described as having an input layer followed by hidden layers, then a final output layer. What distinguishes an ANN from a DNN is the number of hidden layers. 
-
-A convolutional neural network processes patterned data (whether patterned as images or patterned by time or influence) through the inclusion of convolutional and pooling layers in order to identify features and compress the results. 
-
-How an RNN is different: the inclusion of "memory" by incorporating a hidden state. In a neural network of this structure, each layer is considering the current input and the memory of its past inputs. 
-
-Consider processing the information stored in a book. A traditional DNN takes in all words simultaneously, a CNN scans random clusters of pages, and an RNN reads each word sequentially keeping the context of the inputs. 
-
-
 Traditional feed forward DNNs process data in a one way flow. A human brain, in contrast, is a highly interconnected network with feedback loops and memory, much like the structure of an RNN. Our model is attempting to replicate the function of the brain however, the data is completely composed of continuous or categorical non-sequential observations. To rectify this incongruity and leave nary a stone unturned, we explored both a traditional DNN and an RNN.
 
 
 ## Methods
 
+The basic structure of an artificial neural network is described as having an input layer followed by hidden layers, then a final output layer. What distinguishes an ANN from a DNN is the number of hidden layers.  A convolutional neural network processes patterned data (whether patterned as images or patterned by time or influence) through the inclusion of convolutional and pooling layers in order to identify features and compress the results. How an RNN is different: the inclusion of "memory" by incorporating a hidden state. In a neural network of this structure, each layer is considering the current input and the memory of its past inputs. Consider processing the information stored in a book. A traditional DNN takes in all words simultaneously, a CNN scans random clusters of pages, and an RNN reads each word sequentially keeping the context of the inputs. 
 
-discuss preprocessing, any modifications or supplements to the data in case of class imbalance or whatever 
-
-There were several preprocessing steps to make the data ready for the ANN model. We began by verifying that the data set did not need standardization. We then converted the drug columns (the targets) into a binary "user" or "non user" designation based on whether the participant has used this substance within the last year. The study also used a fake drug called "Semer" that was used to identify participants erroneously marking drugs not actually used. We omitted any instances in the dataset where a participant recorded use of "Semer" as accuracy of the remaining disclosed drugs used could not be verified. 
-
-We then convert the features into a numeric matrix. As the goal of our model is to predict drug use on personality and demographic responses and not the use of other drugs, we must remove the other drugs from the numeric feature matrix. 
-
-Before moving onto train/test splitting the data, a class imbalance between many drug classes was observed. Applying a randomized train/test split can compound this imbalance issue and impact the model so we used a composite profile score. By using this method, individuals that use more than one drug will be evenly distributed betweeen the train and test groups. 
-
-For preprocessing the data for RNN, we must convert the matrices used 
-
--   Detail the models or algorithms used.
+-   Detail the structure and mathematics of the ANN/RNN as well as activation functions/sigmoid functions or other algorithms used.
 
 -   Justify your choices based on the problem and data.
 
@@ -96,6 +79,278 @@ y_i = \beta_0 + \beta_1 X_1 +\varepsilon_i
 $$
 
 ## Analysis and Results
+
+```{r}
+library(readr)
+
+# Defining the columns
+column_names = c(
+  "ID", "Age", "Gender", "Education", "Country", "Ethnicity", 
+  "Nscore", "Escore", "Oscore", "Ascore", "Cscore", "Impulsive", "SS", 
+  "Alcohol", "Amphet", "Amyl", "Benzos", "Caff", "Cannabis", "Choc", 
+  "Coke", "Crack", "Ecstasy", "Heroin", "Ketamine", "Legalh", "LSD", 
+  "Meth", "Mushroom", "Nicotine", "Semer", "VSA"
+)
+
+# Reading the file
+library(ucimlrepo)
+drug_data = fetch_ucirepo(id=373)
+data = drug_data$data$original
+#head(data)  
+
+# Demographic reatures have already been scaled (Z-score standardization), however drug columns need to be converted
+# Rows where individuals claimed "semer" use need to be removed since it was included as a fake drug
+
+
+library(dplyr)
+
+# Vector of all the drug column names
+drug_cols = c(
+  "alcohol", "amphet", "amyl", "benzos", "caff", "cannabis", "choc", 
+  "coke", "crack", "ecstasy", "heroin", "ketamine", "legalh", "lsd", 
+  "meth", "mushrooms", "nicotine", "semer", "vsa"
+)
+
+target_drugs = c(
+  "amphet", "amyl", "benzos", "cannabis",
+  "coke", "crack", "ecstasy", "heroin", "ketamine", "legalh", "lsd", 
+  "meth", "mushrooms", "nicotine", "vsa"
+)
+
+# Now we filter out "Semeron" participants by keeping ones that say "never used"
+data_cleaned = data %>%
+  filter(semer == "CL0")
+
+
+# Converting drug consumption columns into a binary target (user vs non-user)
+# 0(non-user) and 1 (user)
+## We will say anyone who has used the particular drug within the last year is a "user"
+
+data_all_binary = data_cleaned %>%
+  mutate(across(
+    .cols = all_of(drug_cols),
+    .fns = ~ ifelse(. %in% c("CL3", "CL4", "CL5", "CL6"), 1, 0)
+  ))
+
+
+# Checking to make sure they are binary
+#head(data_all_binary[, c("alcohol", "amphet", "amyl")])
+
+
+# Now we need to convert the features to a numeric matrix (X)
+# Since we only want to train on demographic and personality scores, not other drug use, we need to remove other drug columns, too. 
+X_data = data_all_binary %>%
+  select(nscore, escore, oscore, ascore, cscore, impuslive, ss) %>%
+  as.matrix()
+#dim(X_data)
+
+
+# Extracting the target variables (drug columns)
+y_matrix = data_all_binary %>%
+  select(all_of(target_drugs)) %>%
+  as.matrix()
+# Verifying the shape
+#print(paste("Features Matrix (X) shape:", paste(dim(X_data), collapse = "x")))
+#print(paste("Multi-Label Target Matrix (y) shape:", paste(dim(y_matrix), collapse = "x")))
+y_matrix1 = data_all_binary %>%
+  select(all_of(drug_cols)) %>%
+  as.matrix()
+
+# Plotting class imbalance 
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+
+# Converting matrix to a dataframe
+imbalance_plot_data = as.data.frame(y_matrix) %>%
+  gather (key = "Drug", value = "Status") %>%
+  mutate (Status = ifelse(Status == 1, "User", "Non-User"))
+
+imbalance_plot_data1 = as.data.frame(y_matrix1) %>%
+  gather (key = "Drug", value = "Status") %>%
+  mutate (Status = ifelse(Status == 1, "User", "Non-User"))
+
+# Creating a bar chart
+ggplot(imbalance_plot_data1, aes (x = reorder(Drug, Status == "User", FUN = sum), fill = Status)) +
+  geom_bar(position = "fill") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_manual(values = c("Non-User"= "gray", "User" = "blue"))+
+  coord_flip() +
+  labs(
+    title = "Class Imbalance Across All 18 Target Substances",
+    x = "Substance",
+    y = "Percentage of Dataset",
+    fill = "Classification",
+  ) +
+  theme_minimal()
+
+ggplot(imbalance_plot_data, aes (x = reorder(Drug, Status == "User", FUN = sum), fill = Status)) +
+  geom_bar(position = "fill") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_manual(values = c("Non-User"= "gray", "User" = "darkgreen"))+
+  coord_flip() +
+  labs(
+    title = "Class Imbalance Across 15 Target Substances",
+    x = "Substance",
+    y = "Percentage of Dataset",
+    fill = "Classification",
+  ) +
+  theme_minimal()
+
+```
+
+```{r}
+# Since we have imbalance for the majority of the drugs, we need to be careful with out train/test split. 
+# A random split will just compound the imbalance issue.
+# We will use a composite profile score 
+library(caret)
+set.seed(10)
+
+# By using this method, individuals that use more than one drug will be evenly distributed
+composite_score = as.factor(rowSums(y_matrix))
+
+# Conducting the 80/20 split
+train_indices = createDataPartition(composite_score, p = 0.80, list = FALSE)
+
+X_train = X_data[train_indices,]
+X_test = X_data[-train_indices,]
+y_train = y_matrix[train_indices,]
+y_test = y_matrix[-train_indices,]
+
+# Testing out the dimensions 
+#print(paste("X_train:", paste(dim(X_train), collapse = " x ")))
+#print(paste("y_train:", paste(dim(y_train), collapse = " x ")))
+#print(paste("X_test:", paste(dim(X_test), collapse = " x ")))
+#print(paste("y_test:", paste(dim(y_test), collapse = " x ")))
+
+
+######## READY FOR MLP USE WITH THIS TRAIN/TEST DATA########
+
+library(keras3)
+library(tensorflow)
+# install.packages("keras3")
+
+
+# Input layer
+inputs = layer_input(shape = c(7))
+
+outputs = inputs %>%
+  layer_dense(units = 64, activation = 'relu') %>%
+  layer_dropout(rate = 0.3) %>%
+  layer_dense(units = 32, activation = 'relu') %>%
+  layer_dropout(rate = 0.2) %>%
+  layer_dense(units = 15, activation = 'sigmoid')
+
+mlp_model = keras_model(input = inputs, output = outputs)
+
+# Compiling the model
+mlp_model %>% compile(
+  optimizer = 'adam',
+  loss = 'binary_crossentropy',
+  metrics = c('accuracy')
+)
+
+# Training the model
+history = mlp_model %>% fit(
+  x = X_train,
+  y = y_train,
+  epochs = 20, 
+  batch_size = 32,
+  validation_split = 0.2,
+  verbose = 0
+)
+  
+plot(history)
+
+# Evaluating the effectiveness of this model using F1 score
+library(yardstick)
+# Converting props to binary
+pred_probs = predict(mlp_model, X_test, verbose = 0)
+pred_binary = ifelse(pred_probs > 0.5, 1, 0)
+results = data.frame(truth = as.matrix(y_test, estimate = pred_binary))
+
+# Calculating for each drug individually
+eval_results = data.frame()
+
+for( i in 1:ncol(y_test)){
+  drug_name = target_drugs[i]
+  temp_df = data.frame(
+    truth = factor(y_test[, i], levels = c(0, 1)),
+    estimate = factor(pred_binary[, i], levels = c(0, 1))
+  )
+  # Getting F1 score
+  f1 = f_meas(temp_df, truth, estimate)
+  eval_results = rbind(eval_results, data.frame(Drug = drug_name, F1 = f1$.estimate))
+}
+print(eval_results)
+# Values close to 1 mean the model is predicting drug usage well. It is interesting to note that the model struggles  
+# the most with predicting nicotine users. 
+
+# Heat map for the first participant's likelihood profile
+all_probs = predict(mlp_model, X_test, verbose = 0)
+
+colnames(all_probs) = target_drugs
+
+# Creating a data frame
+df_probs = as.data.frame(all_probs)
+df_probs$Participant = 1:nrow(df_probs)
+
+df_long = df_probs %>%
+  pivot_longer(cols = -Participant, names_to = "Drug", values_to = "Probability")
+
+# Selecting the first 50 participants 
+df_subset = df_long %>% filter(Participant <=50)
+
+# Creating the heatmap
+ggplot(data = df_subset,aes(x = Drug, y = factor(Participant), fill = Probability)) +
+  geom_tile()+
+  scale_fill_gradient(low = "white", high = "red") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "Individual Drug Usage Likelihoods",
+       x = "Drug Category",
+       y = "Participant ID")
+
+
+```
+
+
+```{r }
+# 1. Define a brand-new respondent's data (All 12 quantified features)
+# Note: These values must be the quantified/scaled numbers matching the dataset #format!
+new_respondent = data.frame(
+  nscore    =  0.13606,  # Neuroticism
+  escore    = -0.43999,  # Extraversion
+  oscore    =  0.29338,  # Openness
+  ascore    = -0.15487,  # Agreeableness
+  cscore    = -0.52745,  # Conscientiousness
+  impuslive =  0.19268,  # Impulsivity
+  ss        =  0.40148   # Sensation Seeking
+)
+
+# 2. Convert to a 1-row matrix so Keras can read it
+new_respondent_matrix <- as.matrix(new_respondent)
+
+new_response_pred_probs = predict(mlp_model, new_respondent_matrix, verbose = 0)
+
+# 3. Create an empty data frame to hold the predictions
+single_predictions <- data.frame(
+  Drug = target_drugs,
+  Probability = round(as.numeric(new_response_pred_probs[1, ]), 4)
+)
+
+single_predictions_sorted <- single_predictions %>%
+  arrange(desc(Probability))
+
+# 6. View the ordered risk profile
+print(single_predictions_sorted)
+```
+
+
+```{r}
+
+```
+
 
 ### Data Exploration and Visualization
 
@@ -141,6 +396,14 @@ ggplot1 = murders %>% ggplot(mapping = aes(x=population/10^6, y=total))
 ```
 
 ### Modeling and Results
+
+There were several preprocessing steps to make the data ready for the ANN model. We began by verifying that the data set did not need standardization. We then converted the drug columns (the targets) into a binary "user" or "non user" designation based on whether the participant has used this substance within the last year. The study also used a fake drug called "Semer" that was used to identify participants erroneously marking drugs not actually used. We omitted any instances in the dataset where a participant recorded use of "Semer" as accuracy of the remaining disclosed drugs used could not be verified. 
+
+We then convert the features into a numeric matrix. As the goal of our model is to predict drug use on personality and demographic responses and not the use of other drugs, we must remove the other drugs from the numeric feature matrix. 
+
+Before moving onto train/test splitting the data, a class imbalance between many drug classes was observed. Applying a randomized train/test split can compound this imbalance issue and impact the model so we used a composite profile score. By using this method, individuals that use more than one drug will be evenly distributed betweeen the train and test groups. 
+
+For preprocessing the data for RNN, we must convert the matrices used to arrays
 
 -   Explain your data preprocessing and cleaning steps.
 
