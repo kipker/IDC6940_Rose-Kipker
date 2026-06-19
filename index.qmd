@@ -83,15 +83,6 @@ $$
 ```{r}
 library(readr)
 
-# Defining the columns
-column_names = c(
-  "ID", "Age", "Gender", "Education", "Country", "Ethnicity", 
-  "Nscore", "Escore", "Oscore", "Ascore", "Cscore", "Impulsive", "SS", 
-  "Alcohol", "Amphet", "Amyl", "Benzos", "Caff", "Cannabis", "Choc", 
-  "Coke", "Crack", "Ecstasy", "Heroin", "Ketamine", "Legalh", "LSD", 
-  "Meth", "Mushroom", "Nicotine", "Semer", "VSA"
-)
-
 # Reading the file
 library(ucimlrepo)
 drug_data = fetch_ucirepo(id=373)
@@ -138,7 +129,7 @@ data_all_binary = data_cleaned %>%
 
 
 # Now we need to convert the features to a numeric matrix (X)
-# Since we only want to train on demographic and personality scores, not other drug use, we need to remove other drug columns, too. 
+# Since we only want to train on personality scores, not other drug use, we need to remove other drug columns, too. 
 X_data = data_all_binary %>%
   select(nscore, escore, oscore, ascore, cscore, impuslive, ss) %>%
   as.matrix()
@@ -198,7 +189,11 @@ ggplot(imbalance_plot_data, aes (x = reorder(Drug, Status == "User", FUN = sum),
   theme_minimal()
 
 ```
+Based on the above bar charts, we noticed two facts about the data: there is a large class imbalance in reported drugs used (very few respondents reporting usage of drugs like crack) and this may cause the model to struggle in predicting use of those, and there are three substances that most if not all respondents reported use of: choc (chocolate), caff (caffeine), and alcohol. This beccomes important when we attempt to rectify class imbalances before splitting into train/test groups. 
 
+A random split without taking into account this class imbalance can compound the imbalance impact. In order to mitigate this, a composite score is used. A sum of substances used is calculated for each of the instances in the dataset then taken into consideration for the tran/test split purposes (this results in respondents remporting multiple substances used are balanced between train and test). 
+
+The purpose in leaving out the three universal baseline substances attempts to make the composite score more reflective of illicit or multi drug use. 
 ```{r}
 # Since we have imbalance for the majority of the drugs, we need to be careful with out train/test split. 
 # A random split will just compound the imbalance issue.
@@ -223,7 +218,176 @@ y_test = y_matrix[-train_indices,]
 #print(paste("X_test:", paste(dim(X_test), collapse = " x ")))
 #print(paste("y_test:", paste(dim(y_test), collapse = " x ")))
 
+```
 
+```{r}
+# 1. Calculate the user percentages for the training set
+train_dist <- as.data.frame(y_train) %>%
+  gather(key = "Drug", value = "Status") %>%
+  group_by(Drug) %>%
+  summarize(User_Percentage = mean(Status == 1) * 100) %>%
+  mutate(Split = "Train")
+
+# 2. Calculate the user percentages for the test set
+test_dist <- as.data.frame(y_test) %>%
+  gather(key = "Drug", value = "Status") %>%
+  group_by(Drug) %>%
+  summarize(User_Percentage = mean(Status == 1) * 100) %>%
+  mutate(Split = "Test")
+
+# 3. Combine both distributions into a single dataframe
+split_comparison <- rbind(train_dist, test_dist)
+
+# 4. Create the side-by-side bar chart
+ggplot(split_comparison, aes(x = reorder(Drug, User_Percentage), y = User_Percentage, fill = Split)) +
+  geom_bar(stat = "identity", position = "dodge", alpha = 0.8) +
+  scale_fill_manual(values = c("Train" = "#2c3e50", "Test" = "#e74c3c")) +
+  coord_flip() +
+  labs(
+    title = "Distribution of Drug Users Across Train and Test Splits",
+    subtitle = "Verifying stratification balance (Omitting Alcohol, Caffeine, and Chocolate)",
+    x = "Substance",
+    y = "Percentage of Users (%)",
+    fill = "Dataset Split"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    axis.text.y = element_text(size = 10)
+  )
+```
+
+
+```{r}
+library(reshape2)
+library(igraph)
+library(ggnetwork)
+library(ggplot2)
+
+# 1. Calculate correlation matrix between all 15 remaining drugs
+drug_corr <- cor(y_matrix) 
+diag(drug_corr) <- 0 
+
+# 2. Filter out weak connections
+drug_corr[abs(drug_corr) < 0.25] <- 0 
+
+# 3. Build the network object
+network_structure <- graph_from_adjacency_matrix(drug_corr, weighted = TRUE, mode = "undirected")
+
+# 4. SPREAD OUT THE NETWORK: Generate spaced coordinates using a scaling trick
+set.seed(123) # For reproducibility
+
+# We pass an inverse weight array (1 - correlation) or a fixed small weight 
+# to force the Fruchterman-Reingold layout to push nodes further apart
+spaced_layout <- layout_with_fr(
+  network_structure, 
+  niter = 1500, 
+  weights = rep(0.1, ecount(network_structure)) # Lower weight = weaker springs = more spread out!
+)
+
+# 5. Convert to ggnetwork using our custom spaced coordinates
+network_data <- ggnetwork(network_structure, layout = spaced_layout)
+
+# 6. Plot the spacious layout
+ggplot(network_data, aes(x = x, y = y, xend = xend, yend = yend)) +
+  
+  # CHANGES HERE: Map link color to the correlation weight and make lines thicker
+  geom_edges(aes(color = weight), size = 1.2, alpha = 0.8) +
+  
+  # Gradient palette for the links (e.g., yellow to red for low to high correlation)
+  scale_color_viridis_c(option = "plasma", name = "Correlation\nStrength", direction = -1) +
+  
+  # Uniform node coloring (a clean slate grey or dark blue so the links pop)
+  geom_nodes(color = "gray", size = 6) +
+  
+  # Labels positioned neatly over the nodes
+  geom_nodetext(aes(label = name), fontface = "bold", color = "black", size = 4) +
+  
+  theme_blank() +
+  labs(
+    title = "The Web of Substance Co-occurrence",
+    subtitle = "Link colors reflect correlation strength (Threshold > 0.25)"
+  ) +
+  theme(
+    legend.position = "right"
+  )
+
+
+```
+From this web we illustrate the strong ties between use of multiple substances. As the lines increase in darkness, the strenght of the usage correlation increases. 
+
+Let's look at the "psychological signature" for some of these substances
+
+```{r}
+library(dplyr)
+library(tidyr)
+# 1. Install remotes if you don't already have it
+if (!requireNamespace("remotes", quietly = TRUE)) {
+  install.packages("remotes")
+}
+
+# 2. Download and install ggradar from GitHub
+remotes::install_github("ricardo-bion/ggradar")
+library(ggradar) 
+
+min_max_scale <- function(x) {
+  (x - min(x, na.rm = TRUE)) / (max(x, na.rm = TRUE) - min(x, na.rm = TRUE))
+}
+
+# 2. Scale the raw respondent traits globally FIRST
+data_scaled_global <- data_all_binary %>%
+  mutate(across(c(nscore, escore, oscore, ascore, cscore, impuslive, ss), min_max_scale))
+
+# 1. Prepare aggregate averages for cannabis
+footprint_cannabis <- data_scaled_global %>%
+  group_by(cannabis) %>%
+  summarise(across(c(nscore, escore, oscore, ascore, cscore, impuslive, ss), mean)) %>%
+  rename(group = cannabis) %>%
+  mutate(group = ifelse(group == 1, "Cannabis User", "Non-User"))
+
+colnames(footprint_cannabis) <- c("group", "Neuroticism", "Extraversion", "Openness", "Agreeableness", "Conscientiousness", "Impulsivity", "Sensation_Seeking")
+
+# 3. Generate the Radar Chart explicitly using the new meth object
+ggradar(
+  plot.data = footprint_cannabis, 
+  grid.min = 0, grid.mid = 0.5, grid.max = 0.8, # Adjust grid boundaries to fit the new global means
+  group.point.size = 3, group.line.width = 1, legend.position = "bottom"
+) + 
+  labs(title = "The Psychological Footprint of Cannabis Consumption")
+```
+Examining the resulting polygons shows us that a user of cannabis is more likely to exhibit traits of sensation seeking and openness more than that reported in non-users. 
+
+Let's examine a "more illicit substance", Crack
+
+```{r}
+min_max_scale <- function(x) {
+  (x - min(x, na.rm = TRUE)) / (max(x, na.rm = TRUE) - min(x, na.rm = TRUE))
+}
+
+# 2. Scale the raw respondent traits globally FIRST
+data_scaled_global <- data_all_binary %>%
+  mutate(across(c(nscore, escore, oscore, ascore, cscore, impuslive, ss), min_max_scale))
+
+# 1. Prepare aggregate averages for Meth
+footprint_crack <- data_scaled_global %>%
+  group_by(crack) %>%
+  summarise(across(c(nscore, escore, oscore, ascore, cscore, impuslive, ss), mean)) %>%
+  rename(group = crack) %>%
+  mutate(group = ifelse(group == 1, "Crack User", "Non-User"))
+
+colnames(footprint_crack) <- c("group", "Neuroticism", "Extraversion", "Openness", "Agreeableness", "Conscientiousness", "Impulsivity", "Sensation_Seeking")
+
+# 3. Generate the Radar Chart explicitly using the new meth object
+ggradar(
+  plot.data = footprint_crack, 
+  grid.min = 0, grid.mid = 0.5, grid.max = 0.7, # Adjust grid boundaries to fit the new global means
+  group.point.size = 3, group.line.width = 1, legend.position = "bottom"
+) + 
+  labs(title = "The Psychological Footprint of Crack Consumption")
+```
+Examining this polygon in contrast shows a larger disparity between non-users and users for the sensation seeking and impulsivity categories with a lower-than-non-user response for concientiousness and agreeableness. 
+
+```{r}
 ######## READY FOR MLP USE WITH THIS TRAIN/TEST DATA########
 
 library(keras3)
