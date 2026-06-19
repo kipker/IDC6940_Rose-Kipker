@@ -42,7 +42,7 @@ Personality traits were assessed using the Revised NEO Five-Factor Inventory (NE
 
 What better tool to predict the decisions from a human brain than by an algorithm designed to work like one: the neural network. In our case, we explored both traditional Deep Neural Networks (DNNs) like multilayer perceptrons as well as Recurrent Neural Networks (RNNs). 
 
-The concept for the function of artificial neural networks (ANNs) has always been to replicate the processing methods of the brain: a complex, multi-parallel system of individual processing units called “neurons” [@MontesinosLopez2022]. While the inception of the artificial neuron dates back to the early 1940s, the underlying mechanism has remained fundamentally unchanged. Early iterations of ANNs were structurally simple, consisting of a single input layer, activation function, and an output layer. At the time, these models were operating with both structural and computational limitations, and as such were restricted to solving simpler, linearly separable problems [@ekundayo2025deep]. The field then experienced a prolonged period of stagnation until it ended abruptly in 1986 with the introduction of back propagation. This optimization method allows networks to systematically and repeatedly adjust their weights across multiple hidden layers to minimize the difference between the actual output and the desired output [@Rumelhart1986]. In the decades since the popularization of back propagation, advancements in computing power and data availability have accelerated the evolution of deep learning, to the point where ANNs have permeated virtually all corners of modern data analysis. 
+The concept for the function of artificial neural networks (ANNs) has always been to replicate the processing methods of the brain: a complex, multi-parallel system of individual processing units called “neurons” [@MontesinosLopez2022] [@Larochelle2009Exploring]. While the inception of the artificial neuron dates back to the early 1940s, the underlying mechanism has remained fundamentally unchanged. Early iterations of ANNs were structurally simple, consisting of a single input layer, activation function, and an output layer. At the time, these models were operating with both structural and computational limitations, and as such were restricted to solving simpler, linearly separable problems [@ekundayo2025deep]. The field then experienced a prolonged period of stagnation until it ended abruptly in 1986 with the introduction of back propagation. This optimization method allows networks to systematically and repeatedly adjust their weights across multiple hidden layers to minimize the difference between the actual output and the desired output [@Rumelhart1986]. In the decades since the popularization of back propagation, advancements in computing power and data availability have accelerated the evolution of deep learning, to the point where ANNs have permeated virtually all corners of modern data analysis. 
 
 The appropriate "version" of ANN to select is largely based on the input data at hand. Are your data points depended on one another or dependent on time itself? An RNN is best suited to this processing. Do you intend to decipher and interpret imagery? Best look into CNNs. But why? And furthermore, what version should we use for this drug dataset? 
 
@@ -51,7 +51,14 @@ Traditional feed forward DNNs process data in a one way flow. A human brain, in 
 
 ## Methods
 
-The basic structure of an artificial neural network is described as having an input layer followed by hidden layers, then a final output layer. What distinguishes an ANN from a DNN is the number of hidden layers.  A convolutional neural network processes patterned data (whether patterned as images or patterned by time or influence) through the inclusion of convolutional and pooling layers in order to identify features and compress the results. How an RNN is different: the inclusion of "memory" by incorporating a hidden state. In a neural network of this structure, each layer is considering the current input and the memory of its past inputs. Consider processing the information stored in a book. A traditional DNN takes in all words simultaneously, a CNN scans random clusters of pages, and an RNN reads each word sequentially keeping the context of the inputs. 
+The multilayer perceptron (MLP) remains the standard feedforward architecture for processing structured, tabular data. Within an MLP, information can only flow in a single direction from the input layer through to the hidden processing layer or layers. Notably, neurons within the same layer are not interconnected. [@elmandouh2026comparing]. While more advanced models have been developed, MLPs have remained the benchmark when both simplicity and computational efficiency are the primary objectives. Furthermore, many optimization techniques have been developed to fine-tune these models, significantly accelerating convergence rates during training [@przybyla2024multi].
+	
+The selection of an appropriate ANN is dictated by the structure of the input data. For time series data, a recurrent neural network (RNN) provides increased analytical power by incorporating short-term memory. Unlike the unidirectional flow within an MLP, an RNN allows information to propagate through feedback loops. This enables the neurons to have connections to the previous layer, connections to neurons in the subsequent layer, and connections that transmit information between other neurons within the same layer. Essentially, this built-in memory enables the model to maintain context across a sequence to link current inputs to historical information [@elmandouh2026comparing].
+
+For the analysis of time series data, language data, or data with a spatial structure, such as images or videos, a convolutional neural network (CNN) is typically the most effective. These models function by applying a series of convolutional filters that perform hierarchical feature extraction. Initially, low-level details such as edges or points are analyzed, while subsequent layers analyze higher-level shapes and contours. Since CNNs utilize the spatial correlation between adjacent data points, data generally requires less preprocessing than more traditional methods [@elmandouh2026comparing]. 
+
+For the purpose of this paper, our analysis will focus exclusively on MLP and RNN models. By comparing the feed-forward processing of the MLP against the feedback-oriented structure of the RNN, we aim to determine if personality traits are good predictors of illicit drug use. 
+
 
 -   Detail the structure and mathematics of the ANN/RNN as well as activation functions/sigmoid functions or other algorithms used.
 
@@ -350,7 +357,7 @@ colnames(footprint_cannabis) <- c("group", "Neuroticism", "Extraversion", "Openn
 # 3. Generate the Radar Chart explicitly using the new meth object
 ggradar(
   plot.data = footprint_cannabis, 
-  grid.min = 0, grid.mid = 0.5, grid.max = 0.8, # Adjust grid boundaries to fit the new global means
+  grid.min = 0, grid.mid = 0.5, grid.max = 0.7, # Adjust grid boundaries to fit the new global means
   group.point.size = 3, group.line.width = 1, legend.position = "bottom"
 ) + 
   labs(title = "The Psychological Footprint of Cannabis Consumption")
@@ -387,6 +394,9 @@ ggradar(
 ```
 Examining this polygon in contrast shows a larger disparity between non-users and users for the sensation seeking and impulsivity categories with a lower-than-non-user response for concientiousness and agreeableness. 
 
+
+###Training a model to predict drug use on personality features
+The below plots of accuracy and loss over epoch show that there is not a tremendous accuracy for our model. This is expected due to the number of different drug classes we are trying to generate probabilties for in one model. 
 ```{r}
 ######## READY FOR MLP USE WITH THIS TRAIN/TEST DATA########
 
@@ -425,7 +435,9 @@ history = mlp_model %>% fit(
 )
   
 plot(history)
-
+```
+We can instead examine the F1 scores of each drug individually to see how well the model is classifying users vs non-users. 
+```{r}
 # Evaluating the effectiveness of this model using F1 score
 library(yardstick)
 # Converting props to binary
@@ -447,8 +459,11 @@ for( i in 1:ncol(y_test)){
   eval_results = rbind(eval_results, data.frame(Drug = drug_name, F1 = f1$.estimate))
 }
 print(eval_results)
-# Values close to 1 mean the model is predicting drug usage well. It is interesting to note that the model struggles  
-# the most with predicting nicotine users. 
+```
+Values close to 1 mean the model is predicting drug usage well. It is interesting to note that the model struggles the most with predicting nicotine users. 
+
+Now that we have generated a model for predicting drug use, let's examine a heat map of participants and their predicted drugs used. 
+```{r}
 
 # Heat map for the first participant's likelihood profile
 all_probs = predict(mlp_model, X_test, verbose = 0)
@@ -477,7 +492,54 @@ ggplot(data = df_subset,aes(x = Drug, y = factor(Participant), fill = Probabilit
 
 
 ```
+And below we can see how the model performed, struggling the most with the nicotine category, as evidenced in the F1 scores. 
+```{r}
+# 1. Convert probabilities to binary predictions (using 0.5 threshold)
+all_preds = ifelse(all_probs >= 0.5, 1, 0)
+colnames(all_preds) = target_drugs
 
+# 2. FIX: Ensure y_test matches all_preds in dimension and order
+# Convert y_test to a clean matrix and align columns with your target drugs
+y_test_matrix = as.matrix(y_test[, target_drugs])
+
+# Double check rows: If y_test is still the full dataset, slice it to match the test size
+if (nrow(y_test_matrix) != nrow(all_preds)) {
+  # This grabs the trailing rows matching your test set size
+  y_test_matrix = tail(y_test_matrix, nrow(all_preds)) 
+}
+
+# 3. Calculate correctness element-by-element safely
+is_correct = (all_preds == y_test_matrix)
+
+# 4. Convert to data frame and add Participant IDs
+df_correct = as.data.frame(is_correct)
+df_correct$Participant = 1:nrow(df_correct)
+
+# 5. Reshape to long format for ggplot
+df_correct_long = df_correct %>%
+  pivot_longer(cols = -Participant, names_to = "Drug", values_to = "Accuracy") %>%
+  mutate(Classification = ifelse(Accuracy == 1, "Correct (Hit)", "Incorrect (Error)"))
+
+# 6. Filter for the first 50 participants 
+df_correct_subset = df_correct_long %>% filter(Participant <= 50)
+
+# 7. Create the Evaluation Heatmap
+ggplot(data = df_correct_subset, aes(x = Drug, y = factor(Participant), fill = Classification)) +
+  geom_tile(color = "white", size = 0.1) + 
+  scale_fill_manual(values = c("Correct (Hit)" = "#2ecc71", "Incorrect (Error)" = "#e74c3c")) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+    panel.grid = element_blank()
+  ) +
+  labs(
+    title = "Model Prediction Accuracy Matrix",
+    subtitle = "Ground Truth vs. MLP Binary Predictions (First 50 Test Participants)",
+    x = "Substance",
+    y = "Participant ID",
+    fill = "Model Outcome"
+  )
+```
 
 ```{r }
 # 1. Define a brand-new respondent's data (All 12 quantified features)
