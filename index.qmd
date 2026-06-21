@@ -85,7 +85,19 @@ $$
 y_i = \beta_0 + \beta_1 X_1 +\varepsilon_i
 $$
 
-## Analysis and Results
+### Data Exploration and Visualization
+
+-   Describe your data sources and collection process.
+
+-   Present initial findings and insights through visualizations.
+
+-   Highlight unexpected patterns or anomalies.
+
+The dataset used in this analysis was collected via an online survey by Fehrman et al. [@fehrman2017five] initially yielded results from 2,051 individuals. To ensure data integrity, a fictitious drug “Semeron” was included as a validity check to identify inattentive respondents and individuals inflating their drug use. Information from individuals who failed this validity check or incorrectly completed the survey was removed, resulting in a usable sample size of 1885 participants. The majority of the respondents resided in the United Kingdom (55.4%) and the United States (29.5%), with the remainder from Canada, Australia, Ireland, and New Zealand. Additional demographic information included age, gender, education level, and ethnicity.
+To assess personality traits, participants completed the Revised NEO Five-Factor Inventory (NEO-FFI-R), responding to 60 statements on a 5-point Likert scale. Impulsiveness was measured using the Barratt Impulsiveness Scale (BIS-11), which assesses three sub-factors: motor, attentional, and non-planning impulsiveness. Additionally, sensation-seeking tendencies were evaluated using the Impulsive Sensation Seeking (ImpSS) scale, consisting of  19 true/false statements. 
+Regarding substance use, participants reported their use of 18 legal and illegal drugs. For each substance, respondents selected from seven usage frequency categories: never used, used over a decade ago, used in the last decade, year, month, week, or day. These categorical responses were then quantified into numerical values by the original researchers, allowing the data to be processed by both statistical and machine learning models as continuous features. 
+
+We begin exploration of this dataset by examining the distribution of reported drug use. See Figure 1 below
 
 ```{r}
 library(readr)
@@ -175,34 +187,23 @@ ggplot(imbalance_plot_data1, aes (x = reorder(Drug, Status == "User", FUN = sum)
   scale_fill_manual(values = c("Non-User"= "gray", "User" = "blue"))+
   coord_flip() +
   labs(
+    tag = "Figure 1",
     title = "Class Imbalance Across All 18 Target Substances",
     x = "Substance",
     y = "Percentage of Dataset",
-    fill = "Classification",
-  ) +
-  theme_minimal()
-
-ggplot(imbalance_plot_data, aes (x = reorder(Drug, Status == "User", FUN = sum), fill = Status)) +
-  geom_bar(position = "fill") +
-  scale_y_continuous(labels = scales::percent) +
-  scale_fill_manual(values = c("Non-User"= "gray", "User" = "darkgreen"))+
-  coord_flip() +
-  labs(
-    title = "Class Imbalance Across 15 Target Substances",
-    x = "Substance",
-    y = "Percentage of Dataset",
-    fill = "Classification",
+    fill = "Classification"
   ) +
   theme_minimal()
 
 ```
-Based on the above bar charts, we noticed two facts about the data: there is a large class imbalance in reported drugs used (very few respondents reporting usage of drugs like crack) and this may cause the model to struggle in predicting use of those, and there are three substances that most if not all respondents reported use of: choc (chocolate), caff (caffeine), and alcohol. This beccomes important when we attempt to rectify class imbalances before splitting into train/test groups. 
+Based on Figure 1, we noticed two facts about the data: there is a large class imbalance in reported drugs used (very few respondents reporting usage of drugs like crack) and this may cause the model to struggle in predicting use of those, and there are three substances that most if not all respondents reported use of: choc (chocolate), caff (caffeine), and alcohol. This becomes important when we attempt to rectify class imbalances before splitting into train/test groups. 
 
-A random split without taking into account this class imbalance can compound the imbalance impact. In order to mitigate this, a composite score is used. A sum of substances used is calculated for each of the instances in the dataset then taken into consideration for the tran/test split purposes (this results in respondents remporting multiple substances used are balanced between train and test). 
+A random split without taking into account this class imbalance can compound the imbalance impact. In order to mitigate this, we introduce the use of a composite score. A sum of substances used is calculated for each of the instances in the dataset then taken into consideration for the train/test split purposes (this results in respondents reporting multiple substances used are balanced between train and test). 
 
-The purpose in leaving out the three universal baseline substances attempts to make the composite score more reflective of illicit or multi drug use. 
+We decided to leave out the three most common substances used to make the composite score more reflective of illicit or multi-drug use. This way a person reporting only the use of those three would now have a composite score of 0 instead of 3 which may be the same as a person who reported use of three illicit drugs. 
+
 ```{r}
-# Since we have imbalance for the majority of the drugs, we need to be careful with out train/test split. 
+# Since we have imbalance for the majority of the drugs, we need to be careful with our train/test split. 
 # A random split will just compound the imbalance issue.
 # We will use a composite profile score 
 library(caret)
@@ -225,7 +226,25 @@ y_test = y_matrix[-train_indices,]
 #print(paste("X_test:", paste(dim(X_test), collapse = " x ")))
 #print(paste("y_test:", paste(dim(y_test), collapse = " x ")))
 
+ggplot(imbalance_plot_data, aes (x = reorder(Drug, Status == "User", FUN = sum), fill = Status)) +
+  geom_bar(position = "fill") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_manual(values = c("Non-User"= "gray", "User" = "darkgreen"))+
+  coord_flip() +
+  labs(
+    tag = "Figure 2",
+    title = "Class Imbalance Across 15 Target Substances",
+    x = "Substance",
+    y = "Percentage of Dataset",
+    fill = "Classification",
+  ) +
+  theme_minimal()
 ```
+
+
+Figure 3 illustrates the split of users between the train and test groups. A fairly even split of users was achieved with this composite score method. 
+
+
 
 ```{r}
 # 1. Calculate the user percentages for the training set
@@ -251,6 +270,7 @@ ggplot(split_comparison, aes(x = reorder(Drug, User_Percentage), y = User_Percen
   scale_fill_manual(values = c("Train" = "#2c3e50", "Test" = "#e74c3c")) +
   coord_flip() +
   labs(
+    tag = "Figure 3",
     title = "Distribution of Drug Users Across Train and Test Splits",
     subtitle = "Verifying stratification balance (Omitting Alcohol, Caffeine, and Chocolate)",
     x = "Substance",
@@ -263,6 +283,103 @@ ggplot(split_comparison, aes(x = reorder(Drug, User_Percentage), y = User_Percen
     axis.text.y = element_text(size = 10)
   )
 ```
+We wanted to examine the typical personality types that were associated with some of these drugs to identify if there were strong overlaps that might impact the predictive ability of our models. Figures 4 and 5 illustrates a "Psychological footprint" of a user of two of our target substances. The blue ring identifies a typical "non-user" and the red ring identifies a typical user. The gaps between the red ring and the blue ring at the individual personality points indicate an larger or smaller propensity for that particular trait. 
+
+```{r}
+library(dplyr)
+library(tidyr)
+# 1. Install remotes if you don't already have it
+if (!requireNamespace("remotes", quietly = TRUE)) {
+  install.packages("remotes")
+}
+
+# 2. Download and install ggradar from GitHub
+remotes::install_github("ricardo-bion/ggradar")
+library(ggradar) 
+
+min_max_scale <- function(x) {
+  (x - min(x, na.rm = TRUE)) / (max(x, na.rm = TRUE) - min(x, na.rm = TRUE))
+}
+
+# 2. Scale the raw respondent traits globally FIRST
+data_scaled_global <- data_all_binary %>%
+  mutate(across(c(nscore, escore, oscore, ascore, cscore, impuslive, ss), min_max_scale))
+
+# 1. Prepare aggregate averages for cannabis
+footprint_cannabis <- data_scaled_global %>%
+  group_by(cannabis) %>%
+  summarise(across(c(nscore, escore, oscore, ascore, cscore, impuslive, ss), mean)) %>%
+  rename(group = cannabis) %>%
+  mutate(group = ifelse(group == 1, "Cannabis User", "Non-User"))
+
+colnames(footprint_cannabis) <- c("group", "Neuroticism", "Extraversion", "Openness", "Agreeableness", "Conscientiousness", "Impulsivity", "Sensation_Seeking")
+
+# 3. Generate the Radar Chart explicitly using the new meth object
+ggradar(
+  plot.data = footprint_cannabis,
+  grid.min = 0, grid.mid = 0.5, grid.max = 0.7,
+  values.radar = c("0%", "50%", "70%"),
+  group.point.size = 3, group.line.width = 1, legend.position = "bottom",
+  
+  # 1. SHRINK THE INTERNAL RADAR TEXT
+  axis.label.size = 3.5,     # Shrinks trait names (Neuroticism, Impulsivity, etc.)
+  grid.label.size = 3,       # Shrinks the percentage labels (0%, 50%, 100%)
+  legend.text.size = 9       # Shrinks the legend text at the bottom
+) + 
+  labs(
+    title = "The Psychological Footprint of Cannabis Consumption", 
+    tag = "Figure 4"
+  ) +
+  # 2. SHRINK THE TITLES AND TAGS
+  theme(
+    plot.tag = element_text(size = 10, face = "bold"),           # Neat, smaller "Figure 5"
+    plot.title = element_text(size = 12, face = "bold"),         # Smaller, crisp title
+    legend.title = element_text(size = 9)                        # Smaller legend title
+  )
+
+
+# 2. Scale the raw respondent traits globally FIRST
+data_scaled_global <- data_all_binary %>%
+  mutate(across(c(nscore, escore, oscore, ascore, cscore, impuslive, ss), min_max_scale))
+
+# 1. Prepare aggregate averages for crack
+footprint_crack <- data_scaled_global %>%
+  group_by(crack) %>%
+  summarise(across(c(nscore, escore, oscore, ascore, cscore, impuslive, ss), mean)) %>%
+  rename(group = crack) %>%
+  mutate(group = ifelse(group == 1, "Crack User", "Non-User"))
+
+colnames(footprint_crack) <- c("group", "Neuroticism", "Extraversion", "Openness", "Agreeableness", "Conscientiousness", "Impulsivity", "Sensation_Seeking")
+
+# 3. Generate the Radar Chart explicitly using the new crack object
+ggradar(
+  plot.data = footprint_crack,
+  grid.min = 0, grid.mid = 0.5, grid.max = 0.7,
+  values.radar = c("0%", "50%", "70%"),
+  group.point.size = 3, group.line.width = 1, legend.position = "bottom",
+  
+  # 1. SHRINK THE INTERNAL RADAR TEXT
+  axis.label.size = 3.5,     # Shrinks trait names (Neuroticism, Impulsivity, etc.)
+  grid.label.size = 3,       # Shrinks the percentage labels (0%, 50%, 100%)
+  legend.text.size = 9       # Shrinks the legend text at the bottom
+) + 
+  labs(
+    title = "The Psychological Footprint of Crack Consumption", 
+    tag = "Figure 5"
+  ) +
+  # 2. SHRINK THE TITLES AND TAGS
+  theme(
+    plot.tag = element_text(size = 10, face = "bold"),           # Neat, smaller "Figure 5"
+    plot.title = element_text(size = 12, face = "bold"),         # Smaller, crisp title
+    legend.title = element_text(size = 9)                        # Smaller legend title
+  )
+
+
+```
+
+Examining the resulting polygons shows us that a user of cannabis is more likely to exhibit traits of sensation seeking and openness more than that reported in non-users. Additionally, the polygon for a crack user shows a larger disparity between non-users and users for the sensation seeking and impulsivity categories with a lower-than-non-user response for conscientiousness and agreeableness. Generally though, the red polygons trend in similar directions for users vs non-users. This raises the question of how correlated usage of drugs is in this dataset. 
+
+We use a correlation matrix (Figure 6) to illustrate this tendency towards drugs used together. Figure 6 confirms the strong ties between use of multiple substances. As the lines increase in darkness, the strength of the usage correlation increases. These correlations as well as the overlapping psychological footprint maps indicate that many respondents likely reported the use of multiple drugs. This information becomes important later when deciding on an activation function for our output level. Do we want to predict across all drugs where the probabilities add to 1? Our data indicate that use of these drugs is not mutually exclusive, thus we want to predict from 0 to 1 for each individual drug as a respondent can have a high probability of using two ore more drugs. 
 
 
 ```{r}
@@ -321,82 +438,13 @@ ggplot(network_data, aes(x = x, y = y, xend = xend, yend = yend)) +
 
 
 ```
-From this web we illustrate the strong ties between use of multiple substances. As the lines increase in darkness, the strenght of the usage correlation increases. 
 
-Let's look at the "psychological signature" for some of these substances
+##Training a model to predict drug use on personality features
 
-```{r}
-library(dplyr)
-library(tidyr)
-# 1. Install remotes if you don't already have it
-if (!requireNamespace("remotes", quietly = TRUE)) {
-  install.packages("remotes")
-}
-
-# 2. Download and install ggradar from GitHub
-remotes::install_github("ricardo-bion/ggradar")
-library(ggradar) 
-
-min_max_scale <- function(x) {
-  (x - min(x, na.rm = TRUE)) / (max(x, na.rm = TRUE) - min(x, na.rm = TRUE))
-}
-
-# 2. Scale the raw respondent traits globally FIRST
-data_scaled_global <- data_all_binary %>%
-  mutate(across(c(nscore, escore, oscore, ascore, cscore, impuslive, ss), min_max_scale))
-
-# 1. Prepare aggregate averages for cannabis
-footprint_cannabis <- data_scaled_global %>%
-  group_by(cannabis) %>%
-  summarise(across(c(nscore, escore, oscore, ascore, cscore, impuslive, ss), mean)) %>%
-  rename(group = cannabis) %>%
-  mutate(group = ifelse(group == 1, "Cannabis User", "Non-User"))
-
-colnames(footprint_cannabis) <- c("group", "Neuroticism", "Extraversion", "Openness", "Agreeableness", "Conscientiousness", "Impulsivity", "Sensation_Seeking")
-
-# 3. Generate the Radar Chart explicitly using the new meth object
-ggradar(
-  plot.data = footprint_cannabis, 
-  grid.min = 0, grid.mid = 0.5, grid.max = 0.7, # Adjust grid boundaries to fit the new global means
-  group.point.size = 3, group.line.width = 1, legend.position = "bottom"
-) + 
-  labs(title = "The Psychological Footprint of Cannabis Consumption")
-```
-Examining the resulting polygons shows us that a user of cannabis is more likely to exhibit traits of sensation seeking and openness more than that reported in non-users. 
-
-Let's examine a "more illicit substance", Crack
-
-```{r}
-min_max_scale <- function(x) {
-  (x - min(x, na.rm = TRUE)) / (max(x, na.rm = TRUE) - min(x, na.rm = TRUE))
-}
-
-# 2. Scale the raw respondent traits globally FIRST
-data_scaled_global <- data_all_binary %>%
-  mutate(across(c(nscore, escore, oscore, ascore, cscore, impuslive, ss), min_max_scale))
-
-# 1. Prepare aggregate averages for Meth
-footprint_crack <- data_scaled_global %>%
-  group_by(crack) %>%
-  summarise(across(c(nscore, escore, oscore, ascore, cscore, impuslive, ss), mean)) %>%
-  rename(group = crack) %>%
-  mutate(group = ifelse(group == 1, "Crack User", "Non-User"))
-
-colnames(footprint_crack) <- c("group", "Neuroticism", "Extraversion", "Openness", "Agreeableness", "Conscientiousness", "Impulsivity", "Sensation_Seeking")
-
-# 3. Generate the Radar Chart explicitly using the new meth object
-ggradar(
-  plot.data = footprint_crack, 
-  grid.min = 0, grid.mid = 0.5, grid.max = 0.7, # Adjust grid boundaries to fit the new global means
-  group.point.size = 3, group.line.width = 1, legend.position = "bottom"
-) + 
-  labs(title = "The Psychological Footprint of Crack Consumption")
-```
-Examining this polygon in contrast shows a larger disparity between non-users and users for the sensation seeking and impulsivity categories with a lower-than-non-user response for concientiousness and agreeableness. 
+The below plots of accuracy and loss over epoch show that there is not a tremendous accuracy for our model. This is expected due to the number of different drug classes we are trying to generate probabilities for in one model. We can instead examine the F1 scores of each drug individually to see how well the model is classifying users vs non-users. Values close to 1 mean the model is predicting drug usage well. It is interesting to note that the model struggles the most with predicting nicotine users. 
 
 
-###Training a model to predict drug use on personality features
-The below plots of accuracy and loss over epoch show that there is not a tremendous accuracy for our model. This is expected due to the number of different drug classes we are trying to generate probabilties for in one model. 
+
 ```{r}
 ######## READY FOR MLP USE WITH THIS TRAIN/TEST DATA########
 
@@ -435,9 +483,7 @@ history = mlp_model %>% fit(
 )
   
 plot(history)
-```
-We can instead examine the F1 scores of each drug individually to see how well the model is classifying users vs non-users. 
-```{r}
+
 # Evaluating the effectiveness of this model using F1 score
 library(yardstick)
 # Converting props to binary
@@ -460,9 +506,11 @@ for( i in 1:ncol(y_test)){
 }
 print(eval_results)
 ```
-Values close to 1 mean the model is predicting drug usage well. It is interesting to note that the model struggles the most with predicting nicotine users. 
 
-Now that we have generated a model for predicting drug use, let's examine a heat map of participants and their predicted drugs used. 
+
+Now that we have generated a model for predicting drug use, let's examine a heat map of participants and their predicted drugs used (Figure 7) and a corresponding plot of hit vs miss for the model when using the ground truth for these participants (Figure 8). 
+
+
 ```{r}
 
 # Heat map for the first participant's likelihood profile
@@ -487,13 +535,11 @@ ggplot(data = df_subset,aes(x = Drug, y = factor(Participant), fill = Probabilit
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   labs(title = "Individual Drug Usage Likelihoods",
-       x = "Drug Category",
-       y = "Participant ID")
+       x = "Substance",
+       y = "Participant ID", 
+       tag = "Figure 7")
 
 
-```
-And below we can see how the model performed, struggling the most with the nicotine category, as evidenced in the F1 scores. 
-```{r}
 # 1. Convert probabilities to binary predictions (using 0.5 threshold)
 all_preds = ifelse(all_probs >= 0.5, 1, 0)
 colnames(all_preds) = target_drugs
@@ -533,6 +579,7 @@ ggplot(data = df_correct_subset, aes(x = Drug, y = factor(Participant), fill = C
     panel.grid = element_blank()
   ) +
   labs(
+    tag = "Figure 8",
     title = "Model Prediction Accuracy Matrix",
     subtitle = "Ground Truth vs. MLP Binary Predictions (First 50 Test Participants)",
     x = "Substance",
@@ -540,6 +587,8 @@ ggplot(data = df_correct_subset, aes(x = Drug, y = factor(Participant), fill = C
     fill = "Model Outcome"
   )
 ```
+
+How could our model be used in a clinical setting? We construct a synthetic profile of a new respondent to the survey and examine how the model predicts the probability of drug usage across our 15 target substances.
 
 ```{r }
 # 1. Define a brand-new respondent's data (All 12 quantified features)
@@ -573,20 +622,7 @@ print(single_predictions_sorted)
 ```
 
 
-```{r}
-
-```
-
-
-### Data Exploration and Visualization
-
--   Describe your data sources and collection process.
-
--   Present initial findings and insights through visualizations.
-
--   Highlight unexpected patterns or anomalies.
-
-A study was conducted to determine how...
+## Analysis and Results
 
 ```{r, warning=FALSE, echo=T, message=FALSE}
 # loading packages 
@@ -623,7 +659,7 @@ ggplot1 = murders %>% ggplot(mapping = aes(x=population/10^6, y=total))
 
 ### Modeling and Results
 
-There were several preprocessing steps to make the data ready for the ANN model. We began by verifying that the data set did not need standardization. We then converted the drug columns (the targets) into a binary "user" or "non user" designation based on whether the participant has used this substance within the last year. The study also used a fake drug called "Semer" that was used to identify participants erroneously marking drugs not actually used. We omitted any instances in the dataset where a participant recorded use of "Semer" as accuracy of the remaining disclosed drugs used could not be verified. 
+There were several preprocessing steps to make the data ready for the ANN model. We began by verifying that the data set did not need standardization. We then converted the drug columns (the targets) into a binary "user" or "non user" designation based on whether the participant has used this substance within the last year. The study also used a fake drug called "Semeron" that was used to identify participants erroneously marking drugs not actually used. We omitted any instances in the dataset where a participant recorded use of "Semer" as accuracy of the remaining disclosed drugs used could not be verified. 
 
 We then convert the features into a numeric matrix. As the goal of our model is to predict drug use on personality and demographic responses and not the use of other drugs, we must remove the other drugs from the numeric feature matrix. 
 
