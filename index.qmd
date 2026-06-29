@@ -30,34 +30,27 @@ body {
 
 ## Introduction
 
-In an era plagued with a severe mental health crisis accelerated by both socioeconomic strife and the cognitive overload of the information age, the temptation to cope or escape can be compelling. As individuals attempt to navigate the current global landscape, many seek assistance from unregulated sources online, such as social media, frequently leading to self-diagnosis and self-medication. This access to “over-information” and a wide variety of ever-evolving psychoactive substances available have essentially left individuals overwhelmed by choice. Consequently, a critical behavioral question remains: what innate factors influence an individual’s substance of choice?
+  In an era plagued with a severe mental health crisis accelerated by both socioeconomic strife and the cognitive overload of the information age, the temptation to cope or escape can be compelling. As individuals attempt to navigate the current global landscape, many seek assistance from unregulated sources online, such as social media, frequently leading to self-diagnosis and self-medication. This access to “over-information” and a wide variety of ever-evolving psychoactive substances available have essentially left individuals overwhelmed by choice. Consequently, a critical behavioral question remains: what innate factors influence an individual’s substance of choice?
 
-To investigate this phenomenon, research conducted by Fehrman et al. explored individual’s risk for drug consumption using a dataset collected via an online survey. [@fehrman2017five] Administered over a 12-month period, the survey resulted in usable data from 1,885 participants across a range of English-speaking nations including the United Kingdom, the United States, Canada, Australia, New Zealand, and Ireland. In addition to collecting information regarding the use of 18 legal and illegal drugs, the survey collected demographic metrics, such as education level and race, as well as their personality traits.
+  To investigate this phenomenon, research conducted by Fehrman et al. explored individual’s risk for drug consumption using a dataset collected via an online survey. [@fehrman2017five] Administered over a 12-month period, the survey resulted in usable data from 1,885 participants across a range of English-speaking nations including the United Kingdom, the United States, Canada, Australia, New Zealand, and Ireland. In addition to collecting information regarding the use of 18 legal and illegal drugs, the survey collected demographic metrics, such as education level and race, as well as their personality traits.
 
 
-Personality traits were assessed using the Revised NEO Five-Factor Inventory (NEO-FFI-R). This method evaluates personalities based on scores across five core dimensions: neuroticism, extraversion, openness to experience, agreeableness, and conscientiousness [@costa1992revised]. This dataset established by Fehrman et al. serves as the foundation for this study. This study attempts to model the complex relationship between personality profiles and an individual’s “drug of choice”, while simultaneously predicting substance risks by implementing both traditional Deep Neural Networks (DNNs), such as the multilayer perceptron, as well as Recurrent Neural Networks (RNNs). 
+  Personality traits were assessed using the Revised NEO Five-Factor Inventory (NEO-FFI-R). This method evaluates personalities based on scores across five core dimensions: neuroticism, extraversion, openness to experience, agreeableness, and conscientiousness [@costa1992revised]. This dataset established by Fehrman et al. serves as the foundation for this study. This study attempts to model the complex relationship between personality profiles and an individual’s “drug of choice”, while simultaneously predicting substance risks by implementing both traditional Deep Neural Networks (DNNs), such as the multilayer perceptron, as well as Recurrent Neural Networks (RNNs). 
 
 
 <!-- -->
 
-What better tool to predict the decisions from a human brain than by an algorithm designed to work like one: the neural network. In our case, we explored both traditional Deep Neural Networks (DNNs) like multilayer perceptrons as well as Recurrent Neural Networks (RNNs). 
-
-The concept for the function of artificial neural networks (ANNs) has always been to replicate the processing methods of the brain: a complex, multi-parallel system of individual processing units called “neurons” [@MontesinosLopez2022] [@Larochelle2009Exploring]. While the inception of the artificial neuron dates back to the early 1940s, the underlying mechanism has remained fundamentally unchanged. Early iterations of ANNs were structurally simple, consisting of a single input layer, activation function, and an output layer. At the time, these models were operating with both structural and computational limitations, and as such were restricted to solving simpler, linearly separable problems [@ekundayo2025deep]. The field then experienced a prolonged period of stagnation until it ended abruptly in 1986 with the introduction of back propagation. This optimization method allows networks to systematically and repeatedly adjust their weights across multiple hidden layers to minimize the difference between the actual output and the desired output [@Rumelhart1986]. In the decades since the popularization of back propagation, advancements in computing power and data availability have accelerated the evolution of deep learning, to the point where ANNs have permeated virtually all corners of modern data analysis. 
-
-The appropriate "version" of ANN to select is largely based on the input data at hand. Are your data points depended on one another or dependent on time itself? An RNN is best suited to this processing. Do you intend to decipher and interpret imagery? Best look into CNNs. But why? And furthermore, what version should we use for this drug dataset? 
-
-Traditional feed forward DNNs process data in a one way flow. A human brain, in contrast, is a highly interconnected network with feedback loops and memory, much like the structure of an RNN. Our model is attempting to replicate the function of the brain however, the data is completely composed of continuous or categorical non-sequential observations. To rectify this incongruity and leave nary a stone unturned, we explored both a traditional DNN and an RNN.
-
+  The concept for the function of artificial neural networks (ANNs) has always been to replicate the processing methods of the brain: a complex, multi-parallel system of individual processing units called “neurons” [@MontesinosLopez2022] [@Larochelle2009Exploring]. While the inception of the artificial neuron dates back to the early 1940s, the underlying mechanism has remained fundamentally unchanged. Early iterations of ANNs were structurally simple, consisting of a single input layer, activation function, and an output layer. At the time, these models were operating with both structural and computational limitations, and as such were restricted to solving simpler, linearly separable problems [@ekundayo2025deep]. The field then experienced a prolonged period of stagnation until it ended abruptly in 1986 with the introduction of backpropagation. This optimization method allows networks to systematically and repeatedly adjust their weights across multiple hidden layers to minimize the difference between the actual output and the desired output [@Rumelhart1986]. In the decades since the popularization of backpropagation, advancements in computing power and data availability have accelerated the evolution of deep learning, to the point where ANNs have permeated virtually all corners of modern data analysis. 
 
 ## Methods
 
-The multilayer perceptron (MLP) remains the standard feedforward architecture for processing structured, tabular data. Within an MLP, information can only flow in a single direction from the input layer through to the hidden processing layer or layers. Notably, neurons within the same layer are not interconnected. [@elmandouh2026comparing]. While more advanced models have been developed, MLPs have remained the benchmark when both simplicity and computational efficiency are the primary objectives. Furthermore, many optimization techniques have been developed to fine-tune these models, significantly accelerating convergence rates during training [@przybyla2024multi].
+  The multilayer perceptron (MLP) remains the standard feedforward architecture for processing structured, tabular data. Within an MLP, information can only flow in a single direction from the input layer through to the hidden processing layer or layers. Notably, neurons within the same layer are not interconnected. [@elmandouh2026comparing]. While more advanced models have been developed, MLPs have remained the benchmark when both simplicity and computational efficiency are the primary objectives. Furthermore, many optimization techniques have been developed to fine-tune these models, significantly accelerating convergence rates during training [@przybyla2024multi].
 	
-The selection of an appropriate ANN is dictated by the structure of the input data. For time series data, a recurrent neural network (RNN) provides increased analytical power by incorporating short-term memory. Unlike the unidirectional flow within an MLP, an RNN allows information to propagate through feedback loops. This enables the neurons to have connections to the previous layer, connections to neurons in the subsequent layer, and connections that transmit information between other neurons within the same layer. Essentially, this built-in memory enables the model to maintain context across a sequence to link current inputs to historical information [@elmandouh2026comparing].
+  The selection of an appropriate ANN is dictated by the structure of the input data. For time series data, a recurrent neural network (RNN) provides increased analytical power by incorporating short-term memory. Unlike the unidirectional flow within an MLP, an RNN allows information to propagate through feedback loops. This enables the neurons to have connections to the previous layer, connections to neurons in the subsequent layer, and connections that transmit information between other neurons within the same layer. Essentially, this built-in memory enables the model to maintain context across a sequence to link current inputs to historical information [@elmandouh2026comparing].
 
-For the analysis of time series data, language data, or data with a spatial structure, such as images or videos, a convolutional neural network (CNN) is typically the most effective. These models function by applying a series of convolutional filters that perform hierarchical feature extraction. Initially, low-level details such as edges or points are analyzed, while subsequent layers analyze higher-level shapes and contours. Since CNNs utilize the spatial correlation between adjacent data points, data generally requires less preprocessing than more traditional methods [@elmandouh2026comparing]. 
+  For the analysis of time series data, language data, or data with a spatial structure, such as images or videos, a convolutional neural network (CNN) is typically the most effective. These models function by applying a series of convolutional filters that perform hierarchical feature extraction. Initially, low-level details such as edges or points are analyzed, while subsequent layers analyze higher-level shapes and contours. Since CNNs utilize the spatial correlation between adjacent data points, data generally requires less preprocessing than more traditional methods [@elmandouh2026comparing]. 
 
-For the purpose of this paper, our analysis will focus exclusively on MLP and RNN models. By comparing the feed-forward processing of the MLP against the feedback-oriented structure of the RNN, we aim to determine if personality traits are good predictors of illicit drug use. 
+  For the purpose of this paper, our analysis will focus exclusively on MLP and RNN models. By comparing the feed-forward processing of the MLP against the feedback-oriented structure of the RNN, we aim to determine if personality traits are good predictors of drug use. 
 
 
 -   Detail the structure and mathematics of the ANN/RNN as well as activation functions/sigmoid functions or other algorithms used.
@@ -87,17 +80,13 @@ $$
 
 ### Data Exploration and Visualization
 
--   Describe your data sources and collection process.
+  The dataset used in this analysis was collected via an online survey by Fehrman et al. [@fehrman2017five] initially yielded results from 2,051 individuals. To ensure data integrity, a fictitious drug “Semeron” was included as a validity check to identify inattentive respondents and individuals inflating their drug use. Information from individuals who failed this validity check or incorrectly completed the survey was removed, resulting in a usable sample size of 1885 participants. The majority of the respondents resided in the United Kingdom (55.4%) and the United States (29.5%), with the remainder from Canada, Australia, Ireland, and New Zealand. Additional demographic information included age, gender, education level, and ethnicity.
 
--   Present initial findings and insights through visualizations.
+  To assess personality traits, participants completed the Revised NEO Five-Factor Inventory (NEO-FFI-R), responding to 60 statements on a 5-point Likert scale. Impulsiveness was measured using the Barratt Impulsiveness Scale (BIS-11), which assesses three sub-factors: motor, attentional, and non-planning impulsiveness. Additionally, sensation-seeking tendencies were evaluated using the Impulsive Sensation Seeking (ImpSS) scale, consisting of  19 true/false statements. 
 
--   Highlight unexpected patterns or anomalies.
+  Regarding substance use, participants reported their use of 18 legal and illegal drugs. For each substance, respondents selected from seven usage frequency categories: never used, used over a decade ago, used in the last decade, year, month, week, or day. These categorical responses were then quantified into numerical values by the original researchers, allowing the data to be processed by both statistical and machine learning models as continuous features. 
 
-The dataset used in this analysis was collected via an online survey by Fehrman et al. [@fehrman2017five] initially yielded results from 2,051 individuals. To ensure data integrity, a fictitious drug “Semeron” was included as a validity check to identify inattentive respondents and individuals inflating their drug use. Information from individuals who failed this validity check or incorrectly completed the survey was removed, resulting in a usable sample size of 1885 participants. The majority of the respondents resided in the United Kingdom (55.4%) and the United States (29.5%), with the remainder from Canada, Australia, Ireland, and New Zealand. Additional demographic information included age, gender, education level, and ethnicity.
-To assess personality traits, participants completed the Revised NEO Five-Factor Inventory (NEO-FFI-R), responding to 60 statements on a 5-point Likert scale. Impulsiveness was measured using the Barratt Impulsiveness Scale (BIS-11), which assesses three sub-factors: motor, attentional, and non-planning impulsiveness. Additionally, sensation-seeking tendencies were evaluated using the Impulsive Sensation Seeking (ImpSS) scale, consisting of  19 true/false statements. 
-Regarding substance use, participants reported their use of 18 legal and illegal drugs. For each substance, respondents selected from seven usage frequency categories: never used, used over a decade ago, used in the last decade, year, month, week, or day. These categorical responses were then quantified into numerical values by the original researchers, allowing the data to be processed by both statistical and machine learning models as continuous features. 
-
-We begin exploration of this dataset by examining the distribution of reported drug use. See Figure 1 below
+  We begin exploration of this dataset by examining the distribution of reported drug use. See Figure 1 below
 
 ```{r}
 library(readr)
@@ -196,11 +185,11 @@ ggplot(imbalance_plot_data1, aes (x = reorder(Drug, Status == "User", FUN = sum)
   theme_minimal()
 
 ```
-Based on Figure 1, we noticed two facts about the data: there is a large class imbalance in reported drugs used (very few respondents reporting usage of drugs like crack) and this may cause the model to struggle in predicting use of those, and there are three substances that most if not all respondents reported use of: choc (chocolate), caff (caffeine), and alcohol. This becomes important when we attempt to rectify class imbalances before splitting into train/test groups. 
+  Based on Figure 1, we noticed two facts about the data: there is a large class imbalance in reported drugs used (very few respondents reporting usage of drugs like crack) and this may cause the model to struggle in predicting use of those, and there are three substances that most if not all respondents reported use of: choc (chocolate), caff (caffeine), and alcohol. This becomes important when we attempt to rectify class imbalances before splitting into train/test groups. 
 
-A random split without taking into account this class imbalance can compound the imbalance impact. In order to mitigate this, we introduce the use of a composite score. A sum of substances used is calculated for each of the instances in the dataset then taken into consideration for the train/test split purposes (this results in respondents reporting multiple substances used are balanced between train and test). 
+  A random split without taking into account this class imbalance can compound the imbalance impact. In order to mitigate this, we introduce the use of a composite score. A sum of substances used is calculated for each of the instances in the dataset then taken into consideration for the train/test split purposes (this results in respondents reporting multiple substances used are balanced between train and test). 
 
-We decided to leave out the three most common substances used to make the composite score more reflective of illicit or multi-drug use. This way a person reporting only the use of those three would now have a composite score of 0 instead of 3 which may be the same as a person who reported use of three illicit drugs. 
+  We decided to leave out the three most common substances used to make the composite score more reflective of illicit or multi-drug use. This way a person reporting only the use of those three would now have a composite score of 0 instead of 3 which may be the same as a person who reported use of three illicit drugs. 
 
 ```{r}
 # Since we have imbalance for the majority of the drugs, we need to be careful with our train/test split. 
@@ -242,7 +231,7 @@ ggplot(imbalance_plot_data, aes (x = reorder(Drug, Status == "User", FUN = sum),
 ```
 
 
-Figure 3 illustrates the split of users between the train and test groups. A fairly even split of users was achieved with this composite score method. 
+  Figure 3 illustrates the split of users between the train and test groups. A fairly even split of users was achieved with this composite score method. 
 
 
 
@@ -283,7 +272,7 @@ ggplot(split_comparison, aes(x = reorder(Drug, User_Percentage), y = User_Percen
     axis.text.y = element_text(size = 10)
   )
 ```
-We wanted to examine the typical personality types that were associated with some of these drugs to identify if there were strong overlaps that might impact the predictive ability of our models. Figures 4 and 5 illustrates a "Psychological footprint" of a user of two of our target substances. The blue ring identifies a typical "non-user" and the red ring identifies a typical user. The gaps between the red ring and the blue ring at the individual personality points indicate an larger or smaller propensity for that particular trait. 
+  We wanted to examine the typical personality types that were associated with some of these drugs to identify if there were strong overlaps that might impact the predictive ability of our models. Figures 4 and 5 illustrate a "psychological footprint" of a user of two of our target substances. The blue ring identifies a typical "non-user" and the red ring identifies a typical user. The gaps between the red ring and the blue ring at the individual personality points indicate an larger or smaller propensity for that particular trait. 
 
 ```{r}
 library(dplyr)
@@ -377,9 +366,9 @@ ggradar(
 
 ```
 
-Examining the resulting polygons shows us that a user of cannabis is more likely to exhibit traits of sensation seeking and openness more than that reported in non-users. Additionally, the polygon for a crack user shows a larger disparity between non-users and users for the sensation seeking and impulsivity categories with a lower-than-non-user response for conscientiousness and agreeableness. Generally though, the red polygons trend in similar directions for users vs non-users. This raises the question of how correlated usage of drugs is in this dataset. 
+  Examining the resulting polygons shows us that a user of cannabis is more likely to exhibit traits of sensation seeking and openness more than that reported in non-users. Additionally, the polygon for a crack user shows a larger disparity between non-users and users for the sensation seeking and impulsivity categories with a lower-than-non-user response for conscientiousness and agreeableness. Generally though, the red polygons trend in similar directions for users vs non-users. This raises the question of how correlated usage of drugs is in this dataset. 
 
-We use a correlation matrix (Figure 6) to illustrate this tendency towards drugs used together. Figure 6 confirms the strong ties between use of multiple substances. As the lines increase in darkness, the strength of the usage correlation increases. These correlations as well as the overlapping psychological footprint maps indicate that many respondents likely reported the use of multiple drugs. This information becomes important later when deciding on an activation function for our output level. Do we want to predict across all drugs where the probabilities add to 1? Our data indicate that use of these drugs is not mutually exclusive, thus we want to predict from 0 to 1 for each individual drug as a respondent can have a high probability of using two ore more drugs. 
+  We use a correlation matrix (Figure 6) to illustrate this tendency towards drugs used together. Figure 6 confirms the strong ties between use of multiple substances. As the lines increase in darkness, the strength of the usage correlation increases. These correlations as well as the overlapping psychological footprint maps indicate that many respondents likely reported the use of multiple drugs. This information becomes important later when deciding on an activation function for our output level. Do we want to predict across all drugs where the probabilities add to 1? Our data indicate that use of these drugs is not mutually exclusive, thus we want to predict from 0 to 1 for each individual drug as a respondent can have a high probability of using two ore more drugs. 
 
 
 ```{r}
@@ -441,7 +430,7 @@ ggplot(network_data, aes(x = x, y = y, xend = xend, yend = yend)) +
 
 ##Training a model to predict drug use on personality features
 
-The below plots of accuracy and loss over epoch show that there is not a tremendous accuracy for our model. This is expected due to the number of different drug classes we are trying to generate probabilities for in one model. We can instead examine the F1 scores of each drug individually to see how well the model is classifying users vs non-users. Values close to 1 mean the model is predicting drug usage well. It is interesting to note that the model struggles the most with predicting nicotine users. 
+  The below plots of accuracy and loss over epoch show that there is not a tremendous accuracy for our model. This is expected due to the number of different drug classes we are trying to generate probabilities for in one model. We can instead examine the F1 scores of each drug individually to see how well the model is classifying users vs non-users. Values close to 1 mean the model is predicting drug usage well. It is interesting to note that the model struggles the most with predicting nicotine users. 
 
 
 
@@ -508,7 +497,7 @@ print(eval_results)
 ```
 
 
-Now that we have generated a model for predicting drug use, let's examine a heat map of participants and their predicted drugs used (Figure 7) and a corresponding plot of hit vs miss for the model when using the ground truth for these participants (Figure 8). 
+  Now that we have generated a model for predicting drug use, let's examine a heat map of participants and their predicted drugs used (Figure 7) and a corresponding plot of hit vs miss for the model when using the ground truth for these participants (Figure 8). 
 
 
 ```{r}
@@ -588,7 +577,7 @@ ggplot(data = df_correct_subset, aes(x = Drug, y = factor(Participant), fill = C
   )
 ```
 
-How could our model be used in a clinical setting? We construct a synthetic profile of a new respondent to the survey and examine how the model predicts the probability of drug usage across our 15 target substances.
+  How could our model be used in a clinical setting? We construct a synthetic profile of a new respondent to the survey and examine how the model predicts the probability of drug usage across our 15 target substances.
 
 ```{r }
 # 1. Define a brand-new respondent's data (All 12 quantified features)
@@ -659,11 +648,11 @@ ggplot1 = murders %>% ggplot(mapping = aes(x=population/10^6, y=total))
 
 ### Modeling and Results
 
-There were several preprocessing steps to make the data ready for the ANN model. We began by verifying that the data set did not need standardization. We then converted the drug columns (the targets) into a binary "user" or "non user" designation based on whether the participant has used this substance within the last year. The study also used a fake drug called "Semeron" that was used to identify participants erroneously marking drugs not actually used. We omitted any instances in the dataset where a participant recorded use of "Semer" as accuracy of the remaining disclosed drugs used could not be verified. 
+  There were several preprocessing steps to make the data ready for the ANN model. We began by verifying that the data set did not need standardization. We then converted the drug columns (the targets) into a binary "user" or "non user" designation based on whether the participant has used this substance within the last year. The study also used a fake drug called "Semeron" that was used to identify participants erroneously marking drugs not actually used. We omitted any instances in the dataset where a participant recorded use of "Semer" as accuracy of the remaining disclosed drugs used could not be verified. 
 
-We then convert the features into a numeric matrix. As the goal of our model is to predict drug use on personality and demographic responses and not the use of other drugs, we must remove the other drugs from the numeric feature matrix. 
+  We then convert the features into a numeric matrix. As the goal of our model is to predict drug use on personality and demographic responses and not the use of other drugs, we must remove the other drugs from the numeric feature matrix. 
 
-Before moving onto train/test splitting the data, a class imbalance between many drug classes was observed. Applying a randomized train/test split can compound this imbalance issue and impact the model so we used a composite profile score. By using this method, individuals that use more than one drug will be evenly distributed betweeen the train and test groups. 
+  Before moving onto train/test splitting the data, a class imbalance between many drug classes was observed. Applying a randomized train/test split can compound this imbalance issue and impact the model so we used a composite profile score. By using this method, individuals that use more than one drug will be evenly distributed betweeen the train and test groups. 
 
 For preprocessing the data for RNN, we must convert the matrices used to arrays
 
