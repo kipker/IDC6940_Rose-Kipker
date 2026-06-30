@@ -53,36 +53,58 @@ body {
   For the purpose of this paper, our analysis will focus exclusively on MLP and RNN models. By comparing the feed-forward processing of the MLP against the feedback-oriented structure of the RNN, we aim to determine if personality traits are good predictors of drug use. 
 
 
--   Detail the structure and mathematics of the ANN/RNN as well as activation functions/sigmoid functions or other algorithms used.
 
--   Justify your choices based on the problem and data.
+The models we have created utilize two layers of relu activation funtions followed by a sigmoid activated output layer.
+the input and hidden layers utilize the ReLU or rectified linear unit function, . 
 
-*The common non-parametric regression model is*
-$Y_i = m(X_i) + \varepsilon_i$*, where* $Y_i$ *can be defined as the sum
-of the regression function value* $m(x)$ *for* $X_i$*. Here* $m(x)$ *is
-unknown and* $\varepsilon_i$ *some errors. With the help of this
-definition, we can create the estimation for local averaging i.e.*
-$m(x)$ *can be estimated with the product of* $Y_i$ *average and* $X_i$
-*is near to* $x$*. In other words, this means that we are discovering
-the line through the data points with the help of surrounding data
-points. The estimation formula is printed below [@R-base]:*
 
-$$
-M_n(x) = \sum_{i=1}^{n} W_n (X_i) Y_i  \tag{1}
-$$$W_n(x)$ *is the sum of weights that belongs to all real numbers.
-Weights are positive numbers and small if* $X_i$ *is far from* $x$*.*
+  The MLP model developed for this analysis consists of an input layer, two hidden layers, and an output layer. The first hidden layer has 64 neurons and uses Rectified Linear Unit (ReLU) activation, where postiive values are passed through as identity and negative values are rendered as 0, while the second hidden layer has 32 neurons and also uses ReLU activation. The use of this activation function is computationally inexpensive and assists with mitigating vanishing gradient issues that arise with the use of tanh or sigmoid functions. Additionally, even thought the ReLU function will inveitably render some neurons inactive with a 0 output, we have also employed a dropout parameter which ensures netowrk sparsity, making sure that neurons in the net do not become co-dependent. The output layer consists of 15 neurons and uses a sigmoid activation since we will be conducting a multi-label classification task.
 
-*Another equation:*
+  Mathematically, these layers can be explained as seen below:
 
-$$
-y_i = \beta_0 + \beta_1 X_1 +\varepsilon_i
-$$
+Hidden layer 1 Calculation with M1 neurons 
+$$ V1_j = g_1\left(\sum_{i=1}^{d} w^{(1)}_{ji} x_i\right) for\ j = 1, ...,M_1 $$
+
+Hidden layer 2 Calculation with M2 neurons 
+$$ V2_k = g_2\left(\sum_{j=1}^{M1} w^{(2)}_{kj} V1_j\right)for\ k = 1, ...,M_2 $$
+Output layer calculation 
+$$ y_l = g_3\left(\sum_{k=1}^{M2} w^{(3)}_{lk} V2_k\right)for\ l = 1, ...,M_3 $$
+  Here, the first hidden layer processes the input features x using weights w(1). The second hidden layer then processes the output of the first hidden layer V1. Finally, the output layer is used to compute the predicted drug usage probabilities y [@MontesinosLopez2022]. The activation functions at each layer are represented by g1, g2, and g3. As previously mentioned, ReLU will be used for the hidden layers in our MLP model. This activation function performs a nonlinear transformation by acting as a switch. If the input is less than 0, then the output will be 0. However, if the input is above a certain threshold, the output is the identify of the input.
+
+ReLU activation function: 
+$$f(z) = \begin{cases} 0 & \text{for } z < 0 \\ z & \text{for } z \ge 0 \end{cases}$$
+ The choice of output layer activation function was between sigmoid, where the probabilities of output classes are independen or the softmax equation which produces probabilities of classes that sum to 1.  It is our belief that the sigmoid activation function best represents the human behavior of being equally (highly) likely to engage in multiple drugs, that a person could have multiple independent high proabbilites of substance use (e.g. a person could have a 90% probability of using cocaine and an 85% probability of using meth).
+
+Sigmoid activation function
+$$f(z) = \frac{1}{1 + e^{-z}}$$  
+Softmax activation function
+$$P(y = i \mid \mathbf{z}) = \frac{e^{z_i}}{\sum_{j=1}^{K} e^{z_j}}$$
+The RNN model for this analysis consists of one hidden layer and a dense, or output, layer. The hidden layer is a limited short-term memory (LSTM) layer of 64 neurons that houses intermediates. The output layer then consists of 15 neurons and a sigmoid activation function, one per drug we are predicting. 
+
+The LSTM employs the use of gates to process information. There are three gates, a forget gate, which decides what previous information is no longer relevant to the processing, the input gate which filters incoming information and determines what is valuable to be saved and passed along, and the output gate which transforms information gathered and processed/filtered into a decision. These gates are mathematically described below: 
+
+forget gate: 
+$$f_t = \sigma(W_f x_t + U_f h_{t-1} + b_f)$$
+
+input gate: 
+$$i_t = \sigma(W_i x_t + U_i h_{t-1} + b_i)$$
+output gate: 
+$$o_t = \sigma(W_o x_t + U_o h_{t-1} + b_o)$$
+
+```{r }
+
+```
+
 
 ### Data Exploration and Visualization
 
   The dataset used in this analysis was collected via an online survey by Fehrman et al. [@fehrman2017five] initially yielded results from 2,051 individuals. To ensure data integrity, a fictitious drug “Semeron” was included as a validity check to identify inattentive respondents and individuals inflating their drug use. Information from individuals who failed this validity check or incorrectly completed the survey was removed, resulting in a usable sample size of 1885 participants. The majority of the respondents resided in the United Kingdom (55.4%) and the United States (29.5%), with the remainder from Canada, Australia, Ireland, and New Zealand. Additional demographic information included age, gender, education level, and ethnicity.
 
-  To assess personality traits, participants completed the Revised NEO Five-Factor Inventory (NEO-FFI-R), responding to 60 statements on a 5-point Likert scale. Impulsiveness was measured using the Barratt Impulsiveness Scale (BIS-11), which assesses three sub-factors: motor, attentional, and non-planning impulsiveness. Additionally, sensation-seeking tendencies were evaluated using the Impulsive Sensation Seeking (ImpSS) scale, consisting of  19 true/false statements. 
+  To assess personality traits, participants completed the Revised NEO Five-Factor Inventory (NEO-FFI-R), responding to 60 statements on a 5-point Likert scale. Impulsiveness was measured using the Barratt Impulsiveness Scale$$f_t = \sigma(W_f x_t + U_f h_{t-1} + b_f)$$
+
+$$i_t = \sigma(W_i x_t + U_i h_{t-1} + b_i)$$
+
+$$o_t = \sigma(W_o x_t + U_o h_{t-1} + b_o)$$ (BIS-11), which assesses three sub-factors: motor, attentional, and non-planning impulsiveness. Additionally, sensation-seeking tendencies were evaluated using the Impulsive Sensation Seeking (ImpSS) scale, consisting of  19 true/false statements. 
 
   Regarding substance use, participants reported their use of 18 legal and illegal drugs. For each substance, respondents selected from seven usage frequency categories: never used, used over a decade ago, used in the last decade, year, month, week, or day. These categorical responses were then quantified into numerical values by the original researchers, allowing the data to be processed by both statistical and machine learning models as continuous features. 
 
@@ -428,7 +450,7 @@ ggplot(network_data, aes(x = x, y = y, xend = xend, yend = yend)) +
 
 ```
 
-##Training a model to predict drug use on personality features
+## Training a model to predict drug use on personality features
 
   The below plots of accuracy and loss over epoch show that there is not a tremendous accuracy for our model. This is expected due to the number of different drug classes we are trying to generate probabilities for in one model. We can instead examine the F1 scores of each drug individually to see how well the model is classifying users vs non-users. Values close to 1 mean the model is predicting drug usage well. It is interesting to note that the model struggles the most with predicting nicotine users. 
 
@@ -609,6 +631,59 @@ single_predictions_sorted <- single_predictions %>%
 # 6. View the ordered risk profile
 print(single_predictions_sorted)
 ```
+## RNN Model
+```{r}
+# Reshaping the data for RNN
+X_train_rnn = array_reshape(as.matrix(X_train), c(nrow(X_train), 7, 1))
+X_test_rnn = array_reshape(as.matrix(X_test), c(nrow(X_test), 7, 1))
+
+# RNN model
+inputs = layer_input(shape = c(7, 1)) 
+outputs = inputs %>%
+  layer_lstm(units = 64) %>%  
+  layer_dense(units = 15, activation = 'sigmoid')
+
+rnn_model = keras_model(inputs = inputs, outputs = outputs)
+
+# Evaluating the effectiveness of this model using F1 score
+
+library(yardstick)
+
+# Converting props to binary
+pred_probs_rnn = predict(rnn_model, X_test_rnn, verbose = 0)
+pred_binary_rnn = ifelse(pred_probs_rnn > 0.5, 1, 0)
+
+# Calculating for each drug individually
+eval_results_rnn = data.frame()
+
+for( i in 1:ncol(y_test)){
+  drug_name = target_drugs[i]
+  temp_df = data.frame(
+    truth = factor(y_test[, i], levels = c(0, 1)),
+    estimate = factor(pred_binary_rnn[, i], levels = c(0, 1))
+  )
+  # Getting F1 score
+  f1 = f_meas(temp_df, truth, estimate)
+  eval_results_rnn = rbind(eval_results_rnn, data.frame(Drug = drug_name, F1 = f1$.estimate))
+}
+print(eval_results_rnn)
+
+```
+Now, let's compare the F1 scores achieved from each of the models. 
+```{r}
+library(ggplot2)
+library(dplyr)
+
+plot_data = rbind(
+  mutate(eval_results, Model = "MLP"),
+  mutate(eval_results_rnn, Model = "RNN")
+)
+
+ggplot(plot_data, aes(x = Drug, y = F1, fill = Model)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme_minimal() +
+  labs(title = "F1-Score Comparison: MLP vs RNN", y = "F1 Score") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 
 ## Analysis and Results
