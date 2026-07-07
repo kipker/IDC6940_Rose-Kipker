@@ -94,7 +94,7 @@ $$o_t = \sigma(W_o x_t + U_o h_{t-1} + b_o)$$
 ```{r }
 
 ```
-### Modeling and Results
+### Analysis and Results
 
   There were several preprocessing steps to make the data ready for the ANN model. We began by verifying that the data set did not need standardization. We then converted the drug columns (the targets) into a binary "user" or "non user" designation based on whether the participant has used this substance within the last year. The study also used a fake drug called "Semeron" that was used to identify participants erroneously marking drugs not actually used. We omitted any instances in the dataset where a participant recorded use of "Semer" as accuracy of the remaining disclosed drugs used could not be verified. 
 
@@ -102,17 +102,13 @@ $$o_t = \sigma(W_o x_t + U_o h_{t-1} + b_o)$$
 
   Before moving onto train/test splitting the data, a class imbalance between many drug classes was observed. Applying a randomized train/test split can compound this imbalance issue and impact the model so we used a composite profile score. By using this method, individuals that use more than one drug will be evenly distributed betweeen the train and test groups. 
 
-For preprocessing the data for RNN, we must convert the matrices used to arrays
+For preprocessing the data for RNN, we must convert the matrices used to arrays. Additionally since the dataset is not time based, modifications were made to allow the functionality of the RNN which is looking for sequential data points or related data points. 
 
 ## Data Exploration and Visualization
 
   The dataset used in this analysis was collected via an online survey by Fehrman et al. [@fehrman2017five] initially yielded results from 2,051 individuals. To ensure data integrity, a fictitious drug “Semeron” was included as a validity check to identify inattentive respondents and individuals inflating their drug use. Information from individuals who failed this validity check or incorrectly completed the survey was removed, resulting in a usable sample size of 1885 participants. The majority of the respondents resided in the United Kingdom (55.4%) and the United States (29.5%), with the remainder from Canada, Australia, Ireland, and New Zealand. Additional demographic information included age, gender, education level, and ethnicity.
 
-  To assess personality traits, participants completed the Revised NEO Five-Factor Inventory (NEO-FFI-R), responding to 60 statements on a 5-point Likert scale. Impulsiveness was measured using the Barratt Impulsiveness Scale$$f_t = \sigma(W_f x_t + U_f h_{t-1} + b_f)$$
-
-$$i_t = \sigma(W_i x_t + U_i h_{t-1} + b_i)$$
-
-$$o_t = \sigma(W_o x_t + U_o h_{t-1} + b_o)$$ (BIS-11), which assesses three sub-factors: motor, attentional, and non-planning impulsiveness. Additionally, sensation-seeking tendencies were evaluated using the Impulsive Sensation Seeking (ImpSS) scale, consisting of  19 true/false statements. 
+  To assess personality traits, participants completed the Revised NEO Five-Factor Inventory (NEO-FFI-R), responding to 60 statements on a 5-point Likert scale. Impulsiveness was measured using the Barratt Impulsiveness Scale (BIS-11), which assesses three sub-factors: motor, attentional, and non-planning impulsiveness. Additionally, sensation-seeking tendencies were evaluated using the Impulsive Sensation Seeking (ImpSS) scale, consisting of  19 true/false statements. 
 
   Regarding substance use, participants reported their use of 18 legal and illegal drugs. For each substance, respondents selected from seven usage frequency categories: never used, used over a decade ago, used in the last decade, year, month, week, or day. These categorical responses were then quantified into numerical values by the original researchers, allowing the data to be processed by both statistical and machine learning models as continuous features. 
 
@@ -128,7 +124,7 @@ data = drug_data$data$original
 #head(data)  
 
 # Demographic reatures have already been scaled (Z-score standardization), however drug columns need to be converted
-# Rows where individuals claimed "semer" use need to be removed since it was included as a fake drug
+# Rows where individuals claimed "semeron" use need to be removed since it was included as a fake drug
 
 
 library(dplyr)
@@ -266,24 +262,24 @@ ggplot(imbalance_plot_data, aes (x = reorder(Drug, Status == "User", FUN = sum),
 
 
 ```{r}
-# 1. Calculate the user percentages for the training set
+# Calculate the user percentages for the training set
 train_dist <- as.data.frame(y_train) %>%
   gather(key = "Drug", value = "Status") %>%
   group_by(Drug) %>%
   summarize(User_Percentage = mean(Status == 1) * 100) %>%
   mutate(Split = "Train")
 
-# 2. Calculate the user percentages for the test set
+# Calculate the user percentages for the test set
 test_dist <- as.data.frame(y_test) %>%
   gather(key = "Drug", value = "Status") %>%
   group_by(Drug) %>%
   summarize(User_Percentage = mean(Status == 1) * 100) %>%
   mutate(Split = "Test")
 
-# 3. Combine both distributions into a single dataframe
+# Combine both distributions into a single dataframe
 split_comparison <- rbind(train_dist, test_dist)
 
-# 4. Create the side-by-side bar chart
+# Create the side-by-side bar chart
 ggplot(split_comparison, aes(x = reorder(Drug, User_Percentage), y = User_Percentage, fill = Split)) +
   geom_bar(stat = "identity", position = "dodge", alpha = 0.8) +
   scale_fill_manual(values = c("Train" = "#2c3e50", "Test" = "#e74c3c")) +
@@ -307,12 +303,12 @@ ggplot(split_comparison, aes(x = reorder(Drug, User_Percentage), y = User_Percen
 ```{r}
 library(dplyr)
 library(tidyr)
-# 1. Install remotes if you don't already have it
+# Install remotes if you don't already have it
 if (!requireNamespace("remotes", quietly = TRUE)) {
   install.packages("remotes")
 }
 
-# 2. Download and install ggradar from GitHub
+# Download and install ggradar from GitHub
 remotes::install_github("ricardo-bion/ggradar")
 library(ggradar) 
 
@@ -320,11 +316,11 @@ min_max_scale <- function(x) {
   (x - min(x, na.rm = TRUE)) / (max(x, na.rm = TRUE) - min(x, na.rm = TRUE))
 }
 
-# 2. Scale the raw respondent traits globally FIRST
+# Scale the raw respondent traits globally FIRST
 data_scaled_global <- data_all_binary %>%
   mutate(across(c(nscore, escore, oscore, ascore, cscore, impuslive, ss), min_max_scale))
 
-# 1. Prepare aggregate averages for cannabis
+# Prepare aggregate averages for cannabis
 footprint_cannabis <- data_scaled_global %>%
   group_by(cannabis) %>%
   summarise(across(c(nscore, escore, oscore, ascore, cscore, impuslive, ss), mean)) %>%
@@ -333,14 +329,13 @@ footprint_cannabis <- data_scaled_global %>%
 
 colnames(footprint_cannabis) <- c("group", "Neuroticism", "Extraversion", "Openness", "Agreeableness", "Conscientiousness", "Impulsivity", "Sensation_Seeking")
 
-# 3. Generate the Radar Chart explicitly using the new meth object
+# Generate the Radar Chart explicitly using the new meth object
 ggradar(
   plot.data = footprint_cannabis,
   grid.min = 0, grid.mid = 0.5, grid.max = 0.7,
   values.radar = c("0%", "50%", "70%"),
   group.point.size = 3, group.line.width = 1, legend.position = "bottom",
   
-  # 1. SHRINK THE INTERNAL RADAR TEXT
   axis.label.size = 3.5,     # Shrinks trait names (Neuroticism, Impulsivity, etc.)
   grid.label.size = 3,       # Shrinks the percentage labels (0%, 50%, 100%)
   legend.text.size = 9       # Shrinks the legend text at the bottom
@@ -349,19 +344,18 @@ ggradar(
     title = "The Psychological Footprint of Cannabis Consumption", 
     tag = "Figure 4"
   ) +
-  # 2. SHRINK THE TITLES AND TAGS
   theme(
-    plot.tag = element_text(size = 10, face = "bold"),           # Neat, smaller "Figure 5"
-    plot.title = element_text(size = 12, face = "bold"),         # Smaller, crisp title
-    legend.title = element_text(size = 9)                        # Smaller legend title
+    plot.tag = element_text(size = 10, face = "bold"),           # Neat, small"Figure 4"
+    plot.title = element_text(size = 12, face = "bold"),         # Small, crisp title
+    legend.title = element_text(size = 9)                        # Small legend title
   )
 
 
-# 2. Scale the raw respondent traits globally FIRST
+# Scale the raw respondent traits globally FIRST
 data_scaled_global <- data_all_binary %>%
   mutate(across(c(nscore, escore, oscore, ascore, cscore, impuslive, ss), min_max_scale))
 
-# 1. Prepare aggregate averages for crack
+# Prepare aggregate averages for crack
 footprint_crack <- data_scaled_global %>%
   group_by(crack) %>%
   summarise(across(c(nscore, escore, oscore, ascore, cscore, impuslive, ss), mean)) %>%
@@ -370,17 +364,16 @@ footprint_crack <- data_scaled_global %>%
 
 colnames(footprint_crack) <- c("group", "Neuroticism", "Extraversion", "Openness", "Agreeableness", "Conscientiousness", "Impulsivity", "Sensation_Seeking")
 
-# 3. Generate the Radar Chart explicitly using the new crack object
+# Generate the Radar Chart explicitly using the new crack object
 ggradar(
   plot.data = footprint_crack,
   grid.min = 0, grid.mid = 0.5, grid.max = 0.7,
   values.radar = c("0%", "50%", "70%"),
   group.point.size = 3, group.line.width = 1, legend.position = "bottom",
   
-  # 1. SHRINK THE INTERNAL RADAR TEXT
-  axis.label.size = 3.5,     # Shrinks trait names (Neuroticism, Impulsivity, etc.)
-  grid.label.size = 3,       # Shrinks the percentage labels (0%, 50%, 100%)
-  legend.text.size = 9       # Shrinks the legend text at the bottom
+  axis.label.size = 3.5,     
+  grid.label.size = 3,       
+  legend.text.size = 9       
 ) + 
   labs(
     title = "The Psychological Footprint of Crack Consumption", 
@@ -388,9 +381,9 @@ ggradar(
   ) +
   # 2. SHRINK THE TITLES AND TAGS
   theme(
-    plot.tag = element_text(size = 10, face = "bold"),           # Neat, smaller "Figure 5"
-    plot.title = element_text(size = 12, face = "bold"),         # Smaller, crisp title
-    legend.title = element_text(size = 9)                        # Smaller legend title
+    plot.tag = element_text(size = 10, face = "bold"),           # Neat, small "Figure 5"
+    plot.title = element_text(size = 12, face = "bold"),         # Small, crisp title
+    legend.title = element_text(size = 9)                        # Small legend title
   )
 
 
@@ -407,18 +400,18 @@ library(igraph)
 library(ggnetwork)
 library(ggplot2)
 
-# 1. Calculate correlation matrix between all 15 remaining drugs
+# Calculate correlation matrix between all 15 remaining drugs
 drug_corr <- cor(y_matrix) 
 diag(drug_corr) <- 0 
 
-# 2. Filter out weak connections
+# Filter out weak connections
 drug_corr[abs(drug_corr) < 0.25] <- 0 
 
-# 3. Build the network object
+# Build the network object
 network_structure <- graph_from_adjacency_matrix(drug_corr, weighted = TRUE, mode = "undirected")
 
-# 4. SPREAD OUT THE NETWORK: Generate spaced coordinates using a scaling trick
-set.seed(123) # For reproducibility
+# SPREAD OUT THE NETWORK: Generate spaced coordinates using a scaling trick
+set.seed(123) 
 
 # We pass an inverse weight array (1 - correlation) or a fixed small weight 
 # to force the Fruchterman-Reingold layout to push nodes further apart
@@ -428,13 +421,13 @@ spaced_layout <- layout_with_fr(
   weights = rep(0.1, ecount(network_structure)) # Lower weight = weaker springs = more spread out!
 )
 
-# 5. Convert to ggnetwork using our custom spaced coordinates
+# Convert to ggnetwork using our custom spaced coordinates
 network_data <- ggnetwork(network_structure, layout = spaced_layout)
 
-# 6. Plot the spacious layout
+# Plot the spacious layout
 ggplot(network_data, aes(x = x, y = y, xend = xend, yend = yend)) +
   
-  # CHANGES HERE: Map link color to the correlation weight and make lines thicker
+  # Map link color to the correlation weight and make lines thicker
   geom_edges(aes(color = weight), size = 1.2, alpha = 0.8) +
   
   # Gradient palette for the links (e.g., yellow to red for low to high correlation)
@@ -457,8 +450,9 @@ ggplot(network_data, aes(x = x, y = y, xend = xend, yend = yend)) +
 
 
 ```
+## Modeling 
 
-## Training a model to predict drug use on personality features
+# The ANN
 
 A two-layer MLP was constructed as described above in the methods section, utilizing ReLU activations on input and hidden layers, and a sigmoid activation function on output. The below plot of binary accuracy and loss vs epoch show the progress of the model. 
 
@@ -575,11 +569,11 @@ ggplot(data = df_subset,aes(x = Drug, y = factor(Participant), fill = Probabilit
        tag = "Figure 7")
 
 
-# 1. Convert probabilities to binary predictions (using 0.5 threshold)
+# Convert probabilities to binary predictions (using 0.5 threshold)
 all_preds = ifelse(all_probs >= 0.5, 1, 0)
 colnames(all_preds) = target_drugs
 
-# 2. FIX: Ensure y_test matches all_preds in dimension and order
+# Ensure y_test matches all_preds in dimension and order
 # Convert y_test to a clean matrix and align columns with your target drugs
 y_test_matrix = as.matrix(y_test[, target_drugs])
 
@@ -589,22 +583,22 @@ if (nrow(y_test_matrix) != nrow(all_preds)) {
   y_test_matrix = tail(y_test_matrix, nrow(all_preds)) 
 }
 
-# 3. Calculate correctness element-by-element safely
+# Calculate correctness element-by-element safely
 is_correct = (all_preds == y_test_matrix)
 
-# 4. Convert to data frame and add Participant IDs
+# Convert to data frame and add Participant IDs
 df_correct = as.data.frame(is_correct)
 df_correct$Participant = 1:nrow(df_correct)
 
-# 5. Reshape to long format for ggplot
+# Reshape to long format for ggplot
 df_correct_long = df_correct %>%
   pivot_longer(cols = -Participant, names_to = "Drug", values_to = "Accuracy") %>%
   mutate(Classification = ifelse(Accuracy == 1, "Correct (Hit)", "Incorrect (Error)"))
 
-# 6. Filter for the first 50 participants 
+# Filter for the first 50 participants 
 df_correct_subset = df_correct_long %>% filter(Participant <= 50)
 
-# 7. Create the Evaluation Heatmap
+# Create the Evaluation Heatmap
 ggplot(data = df_correct_subset, aes(x = Drug, y = factor(Participant), fill = Classification)) +
   geom_tile(color = "white", size = 0.1) + 
   scale_fill_manual(values = c("Correct (Hit)" = "#2ecc71", "Incorrect (Error)" = "#e74c3c")) +
@@ -627,7 +621,7 @@ Figure 8 further illustrates how grading this model by getting all 15 drug predi
   How could our model be used in a clinical setting? We construct a synthetic profile of a new respondent to the survey and examine how the model predicts the probability of drug usage across our 15 target substances. 
 
 ```{r }
-# 1. Define a brand-new respondent's data (All 12 quantified features)
+# Define a brand-new respondent's data (All 12 quantified features)
 # Note: These values must be the quantified/scaled numbers matching the dataset #format!
 new_respondent = data.frame(
   nscore    =  0.13606,  # Neuroticism
@@ -639,12 +633,12 @@ new_respondent = data.frame(
   ss        =  0.40148   # Sensation Seeking
 )
 
-# 2. Convert to a 1-row matrix so Keras can read it
+# Convert to a 1-row matrix so Keras can read it
 new_respondent_matrix <- as.matrix(new_respondent)
 
 new_response_pred_probs = predict(mlp_model, new_respondent_matrix, verbose = 0)
 
-# 3. Create an empty data frame to hold the predictions
+# Create an empty data frame to hold the predictions
 single_predictions <- data.frame(
   Drug = target_drugs,
   Probability = round(as.numeric(new_response_pred_probs[1, ]), 4)
@@ -653,10 +647,10 @@ single_predictions <- data.frame(
 single_predictions_sorted <- single_predictions %>%
   arrange(desc(Probability))
 
-# 6. View the ordered risk profile
+# View the ordered risk profile
 print(single_predictions_sorted)
 ```
-## RNN Model
+# The RNN 
 ```{r}
 # Reshaping the data for RNN
 X_train_rnn = array_reshape(as.matrix(X_train), c(nrow(X_train), 7, 1))
@@ -676,7 +670,7 @@ rnn_model %>% compile(
   metrics = c('binary_accuracy') # Tracks binary accuracy over epochs
 )
 
-# 3. FIT the model (Train it on your data!)
+# FIT the model (Train it on your data!)
 rnn_history = rnn_model %>% fit(
   x = X_train_rnn,
   y = y_train,
@@ -686,7 +680,7 @@ rnn_history = rnn_model %>% fit(
   verbose = 0
 )
 
-# Optional: Plot the accuracy/loss over epochs to compare with your DNN history
+#
 plot(rnn_history)
 
 # Evaluating the effectiveness of this model using F1 score
@@ -731,6 +725,7 @@ print(eval_results_rnn)
 
 
 ```
+# The comparison: 
 Now, let's compare the F1 scores achieved from each of the models. 
 ```{r}
 library(ggplot2)
@@ -748,7 +743,6 @@ ggplot(plot_data, aes(x = Drug, y = F1, fill = Model)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 
-## Analysis and Results
 
 ```
 
