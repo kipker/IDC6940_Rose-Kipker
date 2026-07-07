@@ -112,6 +112,63 @@ For preprocessing the data for RNN, we must convert the matrices used to arrays.
 
   Regarding substance use, participants reported their use of 18 legal and illegal drugs. For each substance, respondents selected from seven usage frequency categories: never used, used over a decade ago, used in the last decade, year, month, week, or day. These categorical responses were then quantified into numerical values by the original researchers, allowing the data to be processed by both statistical and machine learning models as continuous features. 
 
+  Table 1 below provides an overview of the features used in this study. While the personality traits are represented as continuous values, the substance usage is represented using a scale from 0 to 6 and labeled as "Drug Usage Intensity". 
+```{r}
+library(knitr)
+library(psych)
+library(ucimlrepo)
+
+drug_data = fetch_ucirepo(id=373)
+data = drug_data$data$original
+
+pre_drug_data = data[, 7:32]
+pre_stats = describe(pre_drug_data)
+
+Variable_map = c(
+  "nscore" = "Neuroticism score",
+  "escore" = "Extraversion score",
+  "oscore" = "Openness to Experience score",
+  "ascore" = "Agreeableness score",
+  "cscore" = "Conscientiousness score",
+  "impuslive" = "Impulsiveness (BIS-11) score",
+  "ss" = "Sensation Seeking (ImpSS) score",
+  "alcohol*" = "Alcohol usage frequency (0-6)",
+  "amphet*" = "Amphetamine usage frequency (0-6)",
+  "amyl*" = "Amyl nitrite usage frequency (0-6)",
+  "benzos*" = "Benzodiazepine usage frequency (0-6)",
+  "caff*" = "Caffeine usage frequency (0-6)",
+  "cannabis*" = "Cannabis usage frequency (0-6)",
+  "choc*" = "Chocolate usage frequency (0-6)",
+  "coke*" = "Cocaine usage frequency (0-6)",
+  "crack*" = "Crack usage frequency (0-6)",
+  "ecstasy*" = "Ecstasy usage frequency (0-6)",
+  "heroin*" = "Heroin usage frequency (0-6)",
+  "ketamine*" = "Ketamine usage frequency (0-6)",
+  "legalh*" = "Legal highs usage frequency (0-6)",
+  "lsd*" = "LSD usage frequency (0-6)",
+  "meth*" = "Methadone usage frequency (0-6)",
+  "mushrooms*" = "Magic mushrooms usage frequency (0-6)",
+  "nicotine*" = "Nicotine usage frequency (0-6)",
+  "semer*" = "Semeron (ficticious drug) usage frequency (0-6)",
+  "vsa*" = "Volatile Substance Abuse usage frequency (0-6)"
+)
+pre_summary = data.frame(
+  Substance = as.character(rownames(pre_stats)),
+  Mean = round(pre_stats$mean, 2),
+  SD = round(pre_stats$sd, 2),
+  Min = pre_stats$min,
+  Max = pre_stats$max,
+  Type = c(rep("Personality", 7), rep("Drug Usage Intensity", 19)),
+  stringsAsFactors = FALSE
+)
+
+pre_summary$Description = Variable_map[pre_summary$Substance]
+
+pre_summary = pre_summary[, c("Substance", "Description", "Mean", "SD", "Min", "Max", "Type")]
+
+kable(pre_summary, caption = "Table 1: Descriptive Statistics and Variable Descriptions")
+```
+ 
   We begin exploration of this dataset by examining the distribution of reported drug use. See Figure 1 below
 
 ```{r}
