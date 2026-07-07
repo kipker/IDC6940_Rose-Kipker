@@ -94,9 +94,17 @@ $$o_t = \sigma(W_o x_t + U_o h_{t-1} + b_o)$$
 ```{r }
 
 ```
+### Modeling and Results
 
+  There were several preprocessing steps to make the data ready for the ANN model. We began by verifying that the data set did not need standardization. We then converted the drug columns (the targets) into a binary "user" or "non user" designation based on whether the participant has used this substance within the last year. The study also used a fake drug called "Semeron" that was used to identify participants erroneously marking drugs not actually used. We omitted any instances in the dataset where a participant recorded use of "Semer" as accuracy of the remaining disclosed drugs used could not be verified. 
 
-### Data Exploration and Visualization
+  We then convert the features into a numeric matrix. As the goal of our model is to predict drug use on personality and demographic responses and not the use of other drugs, we must remove the other drugs from the numeric feature matrix. 
+
+  Before moving onto train/test splitting the data, a class imbalance between many drug classes was observed. Applying a randomized train/test split can compound this imbalance issue and impact the model so we used a composite profile score. By using this method, individuals that use more than one drug will be evenly distributed betweeen the train and test groups. 
+
+For preprocessing the data for RNN, we must convert the matrices used to arrays
+
+## Data Exploration and Visualization
 
   The dataset used in this analysis was collected via an online survey by Fehrman et al. [@fehrman2017five] initially yielded results from 2,051 individuals. To ensure data integrity, a fictitious drug “Semeron” was included as a validity check to identify inattentive respondents and individuals inflating their drug use. Information from individuals who failed this validity check or incorrectly completed the survey was removed, resulting in a usable sample size of 1885 participants. The majority of the respondents resided in the United Kingdom (55.4%) and the United States (29.5%), with the remainder from Canada, Australia, Ireland, and New Zealand. Additional demographic information included age, gender, education level, and ethnicity.
 
@@ -452,9 +460,7 @@ ggplot(network_data, aes(x = x, y = y, xend = xend, yend = yend)) +
 
 ## Training a model to predict drug use on personality features
 
-  The below plots of accuracy and loss over epoch show that there is not a tremendous accuracy for our model. This is expected due to the number of different drug classes we are trying to generate probabilities for in one model. We can instead examine the F1 scores of each drug individually to see how well the model is classifying users vs non-users. Values close to 1 mean the model is predicting drug usage well. It is interesting to note that the model struggles the most with predicting nicotine users. 
-
-
+A two-layer MLP was constructed as described above in the methods section, utilizing ReLU activations on input and hidden layers, and a sigmoid activation function on output. The below plot of binary accuracy and loss vs epoch show the progress of the model. 
 
 ```{r}
 ######## READY FOR MLP USE WITH THIS TRAIN/TEST DATA########
@@ -480,10 +486,8 @@ mlp_model = keras_model(input = inputs, output = outputs)
 mlp_model %>% compile(
   optimizer = 'adam',
   loss = 'binary_crossentropy',
-  metrics = c('accuracy')
+  metrics = c('binary_accuracy')
 )
-
-# Training the model
 history = mlp_model %>% fit(
   x = X_train,
   y = y_train,
@@ -492,32 +496,52 @@ history = mlp_model %>% fit(
   validation_split = 0.2,
   verbose = 0
 )
-  
 plot(history)
 
 # Evaluating the effectiveness of this model using F1 score
 library(yardstick)
 # Converting props to binary
 pred_probs = predict(mlp_model, X_test, verbose = 0)
+#summary(pred_probs)
 pred_binary = ifelse(pred_probs > 0.5, 1, 0)
 results = data.frame(truth = as.matrix(y_test, estimate = pred_binary))
 
-# Calculating for each drug individually
-eval_results = data.frame()
+# Calculating for each drug individually with dynamic thresholds
+eval_results_mlp = data.frame()
 
-for( i in 1:ncol(y_test)){
+for(i in 1:ncol(y_test)){
   drug_name = target_drugs[i]
-  temp_df = data.frame(
-    truth = factor(y_test[, i], levels = c(0, 1)),
-    estimate = factor(pred_binary[, i], levels = c(0, 1))
-  )
-  # Getting F1 score
-  f1 = f_meas(temp_df, truth, estimate)
-  eval_results = rbind(eval_results, data.frame(Drug = drug_name, F1 = f1$.estimate))
+  
+  # DYNAMIC THRESHOLD: Use the median predicted probability for this specific drug
+  # alternative: use mean(pred_probs[, i])
+  current_threshold = median(pred_probs[, i]) 
+  
+  # Convert to binary using this column's unique threshold
+  binary_preds = ifelse(pred_probs[, i] > current_threshold, 1, 0)
+  
+  truth_vec    = factor(y_test[, i], levels = c(0, 1))
+  estimate_vec = factor(binary_preds, levels = c(0, 1))
+  
+  # Calculate metrics safely
+  f1   = f_meas_vec(truth_vec, estimate_vec, event_level = "second")
+  prec = precision_vec(truth_vec, estimate_vec, event_level = "second")
+  rec  = recall_vec(truth_vec, estimate_vec, event_level = "second")
+  
+  eval_results_mlp = rbind(eval_results_mlp, data.frame(
+    Drug = drug_name, 
+    Threshold = current_threshold, # tracked to see what was used
+    F1 = ifelse(is.na(f1), 0, f1),
+    Precision = ifelse(is.na(prec), 0, prec),
+    Recall = ifelse(is.na(rec), 0, rec)
+  ))
 }
-print(eval_results)
-```
 
+print(eval_results_mlp)
+
+```
+The table shows each drug, the threshold used for that drug, and the corresponding F1 score (grading how well the model predicted drug use), precision, and recall. A blanket predicted probability threshold of 0.5 (where probabilities over .5 were assigned class 1-user) was inappropriate for every drug. Some drugs probabilities capped out around 7%, thus all predicted instances would be 0 with the 50% threshold. Instead, a dynamic threshold was implemented where the median predicted probability or 50% was used. As expected, drugs with the lowest F1 scores also have the lowest precision, accuracy, and threshold, likely because they are more rare substances in use and therefore have the lowest occurrence and represent the classes most imbalanced (amyl, crack, and vsa). 
+
+Additionally, we discovered that using the metric "accuracy" was misrepresenting of the performance of the model. The metric "accuracy" only grades the model positively if it correctly predicted ALL of the 15 target substances. If the model correctly predicted 14 out of the 15 substances, that was considered a model failure. As we are looking at prediction of each drug independently, we updated the metric of the model to "binary accuracy" which represents how many of the 15 drugs it predicts correctly for each instance in the data set. This model is performing at approaching 85% accuracy overall. 
 
   Now that we have generated a model for predicting drug use, let's examine a heat map of participants and their predicted drugs used (Figure 7) and a corresponding plot of hit vs miss for the model when using the ground truth for these participants (Figure 8). 
 
@@ -598,8 +622,9 @@ ggplot(data = df_correct_subset, aes(x = Drug, y = factor(Participant), fill = C
     fill = "Model Outcome"
   )
 ```
+Figure 8 further illustrates how grading this model by getting all 15 drug predictions correct was driving down overall model accuracy and the binary accuracy is a much better description of model performance. This figure aligns with the approx. 85% accuracy for each instance rather than the overall accuracy of ~20% when the metric "accuracy" was used. 
 
-  How could our model be used in a clinical setting? We construct a synthetic profile of a new respondent to the survey and examine how the model predicts the probability of drug usage across our 15 target substances.
+  How could our model be used in a clinical setting? We construct a synthetic profile of a new respondent to the survey and examine how the model predicts the probability of drug usage across our 15 target substances. 
 
 ```{r }
 # 1. Define a brand-new respondent's data (All 12 quantified features)
@@ -645,28 +670,65 @@ outputs = inputs %>%
 
 rnn_model = keras_model(inputs = inputs, outputs = outputs)
 
+rnn_model %>% compile(
+  optimizer = 'adam',
+  loss = 'binary_crossentropy',
+  metrics = c('binary_accuracy') # Tracks binary accuracy over epochs
+)
+
+# 3. FIT the model (Train it on your data!)
+rnn_history = rnn_model %>% fit(
+  x = X_train_rnn,
+  y = y_train,
+  epochs = 20,
+  batch_size = 32,
+  validation_split = 0.2,
+  verbose = 0
+)
+
+# Optional: Plot the accuracy/loss over epochs to compare with your DNN history
+plot(rnn_history)
+
 # Evaluating the effectiveness of this model using F1 score
 
 library(yardstick)
-
-# Converting props to binary
 pred_probs_rnn = predict(rnn_model, X_test_rnn, verbose = 0)
-pred_binary_rnn = ifelse(pred_probs_rnn > 0.5, 1, 0)
+pred_binary_rnn = ifelse(pred_probs > 0.5, 1, 0)
+results = data.frame(truth = as.matrix(y_test, estimate = pred_binary_rnn))
 
-# Calculating for each drug individually
+# Calculating for each drug individually with dynamic thresholds
 eval_results_rnn = data.frame()
 
-for( i in 1:ncol(y_test)){
+for(i in 1:ncol(y_test)){
   drug_name = target_drugs[i]
-  temp_df = data.frame(
-    truth = factor(y_test[, i], levels = c(0, 1)),
-    estimate = factor(pred_binary_rnn[, i], levels = c(0, 1))
-  )
-  # Getting F1 score
-  f1 = f_meas(temp_df, truth, estimate)
-  eval_results_rnn = rbind(eval_results_rnn, data.frame(Drug = drug_name, F1 = f1$.estimate))
+  
+  # DYNAMIC THRESHOLD: Use the median predicted probability for this specific drug
+  # alternative: use mean(pred_probs[, i])
+  current_threshold = median(pred_probs_rnn[, i]) 
+  
+  # Convert to binary using this column's unique threshold
+  binary_preds = ifelse(pred_probs_rnn[, i] > current_threshold, 1, 0)
+  
+  truth_vec    = factor(y_test[, i], levels = c(0, 1))
+  estimate_vec = factor(binary_preds, levels = c(0, 1))
+  
+  # Calculate metrics safely
+  f1   = f_meas_vec(truth_vec, estimate_vec, event_level = "second")
+  prec = precision_vec(truth_vec, estimate_vec, event_level = "second")
+  rec  = recall_vec(truth_vec, estimate_vec, event_level = "second")
+  
+  eval_results_rnn = rbind(eval_results_rnn, data.frame(
+    Drug = drug_name, 
+    Threshold = current_threshold, # tracked to see what was used
+    F1 = ifelse(is.na(f1), 0, f1),
+    Precision = ifelse(is.na(prec), 0, prec),
+    Recall = ifelse(is.na(rec), 0, rec)
+  ))
 }
+
 print(eval_results_rnn)
+
+
 
 ```
 Now, let's compare the F1 scores achieved from each of the models. 
@@ -675,7 +737,7 @@ library(ggplot2)
 library(dplyr)
 
 plot_data = rbind(
-  mutate(eval_results, Model = "MLP"),
+  mutate(eval_results_mlp, Model = "MLP"),
   mutate(eval_results_rnn, Model = "RNN")
 )
 
@@ -683,18 +745,11 @@ ggplot(plot_data, aes(x = Drug, y = F1, fill = Model)) +
   geom_bar(stat = "identity", position = "dodge") +
   theme_minimal() +
   labs(title = "F1-Score Comparison: MLP vs RNN", y = "F1 Score") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 
 ## Analysis and Results
 
-```{r, warning=FALSE, echo=T, message=FALSE}
-# loading packages 
-library(tidyverse)
-library(knitr)
-library(ggthemes)
-library(ggrepel)
-library(dslabs)
 ```
 
 ```{r, warning=FALSE, echo=TRUE}
@@ -703,15 +758,7 @@ library(dslabs)
 
 ```
 
-### Modeling and Results
 
-  There were several preprocessing steps to make the data ready for the ANN model. We began by verifying that the data set did not need standardization. We then converted the drug columns (the targets) into a binary "user" or "non user" designation based on whether the participant has used this substance within the last year. The study also used a fake drug called "Semeron" that was used to identify participants erroneously marking drugs not actually used. We omitted any instances in the dataset where a participant recorded use of "Semer" as accuracy of the remaining disclosed drugs used could not be verified. 
-
-  We then convert the features into a numeric matrix. As the goal of our model is to predict drug use on personality and demographic responses and not the use of other drugs, we must remove the other drugs from the numeric feature matrix. 
-
-  Before moving onto train/test splitting the data, a class imbalance between many drug classes was observed. Applying a randomized train/test split can compound this imbalance issue and impact the model so we used a composite profile score. By using this method, individuals that use more than one drug will be evenly distributed betweeen the train and test groups. 
-
-For preprocessing the data for RNN, we must convert the matrices used to arrays
 
 -   Explain your data preprocessing and cleaning steps.
 
