@@ -94,7 +94,7 @@ $$o_t = \sigma(W_o x_t + U_o h_{t-1} + b_o)$$
 ```{r }
 
 ```
-### Analysis and Results
+# Analysis and Results
 
   There were several preprocessing steps to make the data ready for the ANN model. We began by verifying that the data set did not need standardization. We then converted the drug columns (the targets) into a binary "user" or "non user" designation based on whether the participant has used this substance within the last year. The study also used a fake drug called "Semeron" that was used to identify participants erroneously marking drugs not actually used. We omitted any instances in the dataset where a participant recorded use of "Semer" as accuracy of the remaining disclosed drugs used could not be verified. 
 
@@ -509,7 +509,7 @@ ggplot(network_data, aes(x = x, y = y, xend = xend, yend = yend)) +
 ```
 ## Modeling 
 
-# The ANN
+### The ANN
 
 A two-layer MLP was constructed as described above in the methods section, utilizing ReLU activations on input and hidden layers, and a sigmoid activation function on output. The below plot of binary accuracy and loss vs epoch show the progress of the model. 
 
@@ -707,7 +707,7 @@ single_predictions_sorted <- single_predictions %>%
 # View the ordered risk profile
 print(single_predictions_sorted)
 ```
-# The RNN 
+### The RNN 
 ```{r}
 # Reshaping the data for RNN
 X_train_rnn = array_reshape(as.matrix(X_train), c(nrow(X_train), 7, 1))
@@ -782,7 +782,7 @@ print(eval_results_rnn)
 
 
 ```
-# The comparison: 
+### The comparison: 
 Now, let's compare the F1 scores achieved from each of the models. 
 ```{r}
 library(ggplot2)
