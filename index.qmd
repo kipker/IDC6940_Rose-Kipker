@@ -107,7 +107,7 @@ $$o_t = \sigma(W_o x_t + U_o h_{t-1} + b_o)$$
 
   Regarding substance use, participants reported their use of 18 legal and illegal drugs. For each substance, respondents selected from seven usage frequency categories: never used, used over a decade ago, used in the last decade, year, month, week, or day. These categorical responses were then quantified into numerical values by the original researchers, allowing the data to be processed by both statistical and machine learning models as continuous features. 
 
-  Table 1 below provides an overview of the features used in this study. While the personality traits are represented as continuous values, the substance usage is represented using a scale from 0 to 6 and labeled as "Drug Usage Intensity". 
+  Table 1 below provides an overview of the features used in this study. While the personality traits are represented as continuous values, the substance usage is represented using a scale from 0 to 6 in the literature. In Table 1, the drug use intensity responses were converted to a 1 (never used) to 7 (used in the past day) numeric index during data processing for our later modeling purposes. 
 ```{r}
 library(knitr)
 library(psych)
@@ -115,8 +115,12 @@ library(ucimlrepo)
 
 drug_data = fetch_ucirepo(id=373)
 data = drug_data$data$original
-
 pre_drug_data = data[, 7:32]
+
+#drug_col_indices = 8:26
+#pre_drug_data[drug_col_indices] = lapply(pre_drug_data[drug_col_indices], function(x) as.numeric(x) - 1)
+
+
 pre_stats = describe(pre_drug_data)
 
 Variable_map = c(
@@ -127,25 +131,25 @@ Variable_map = c(
   "cscore" = "Conscientiousness score",
   "impuslive" = "Impulsiveness (BIS-11) score",
   "ss" = "Sensation Seeking (ImpSS) score",
-  "alcohol*" = "Alcohol usage frequency (0-6)",
-  "amphet*" = "Amphetamine usage frequency (0-6)",
-  "amyl*" = "Amyl nitrite usage frequency (0-6)",
-  "benzos*" = "Benzodiazepine usage frequency (0-6)",
-  "caff*" = "Caffeine usage frequency (0-6)",
-  "cannabis*" = "Cannabis usage frequency (0-6)",
-  "choc*" = "Chocolate usage frequency (0-6)",
-  "coke*" = "Cocaine usage frequency (0-6)",
-  "crack*" = "Crack usage frequency (0-6)",
-  "ecstasy*" = "Ecstasy usage frequency (0-6)",
-  "heroin*" = "Heroin usage frequency (0-6)",
-  "ketamine*" = "Ketamine usage frequency (0-6)",
-  "legalh*" = "Legal highs usage frequency (0-6)",
-  "lsd*" = "LSD usage frequency (0-6)",
-  "meth*" = "Methadone usage frequency (0-6)",
-  "mushrooms*" = "Magic mushrooms usage frequency (0-6)",
-  "nicotine*" = "Nicotine usage frequency (0-6)",
-  "semer*" = "Semeron (ficticious drug) usage frequency (0-6)",
-  "vsa*" = "Volatile Substance Abuse usage frequency (0-6)"
+  "alcohol*" = "Alcohol usage frequency (1-7)",
+  "amphet*" = "Amphetamine usage frequency (1-7)",
+  "amyl*" = "Amyl nitrite usage frequency (1-7)",
+  "benzos*" = "Benzodiazepine usage frequency (1-7)",
+  "caff*" = "Caffeine usage frequency (1-7)",
+  "cannabis*" = "Cannabis usage frequency (1-7)",
+  "choc*" = "Chocolate usage frequency (1-7)",
+  "coke*" = "Cocaine usage frequency (1-7)",
+  "crack*" = "Crack usage frequency (1-7)",
+  "ecstasy*" = "Ecstasy usage frequency (1-7)",
+  "heroin*" = "Heroin usage frequency (1-7)",
+  "ketamine*" = "Ketamine usage frequency (1-7)",
+  "legalh*" = "Legal highs usage frequency (1-7)",
+  "lsd*" = "LSD usage frequency (1-7)",
+  "meth*" = "Methadone usage frequency (1-7)",
+  "mushrooms*" = "Magic mushrooms usage frequency (1-7)",
+  "nicotine*" = "Nicotine usage frequency (1-7)",
+  "semer*" = "Semeron (ficticious drug) usage frequency (1-7)",
+  "vsa*" = "Volatile Substance Abuse usage frequency (1-7)"
 )
 pre_summary = data.frame(
   Substance = as.character(rownames(pre_stats)),
@@ -778,6 +782,7 @@ print(eval_results_rnn)
   The table above shows the substances as well as their corresponding threshold, F1 score, precision, and recall. The same dynamic threshold that was implemented in our MLP model was used in this RNN model, which in addition to class imbalance, increases the sensitivity (recall) at the expense of the model's precision. Again, this would result in increased number of false positives, particularly for substances that are more rare. 
 
 
+
 ### Comparing Effectiveness of MLP and RNN Models 
 
   To directly compare the effectiveness of the MLP and RNN models, the F1-scores for each model were plotted side-by-side across each of the 15 non-mutually exclusive substances in Figure 9. Since both models used an adaptive median threshold to help combat class imbalance observed in the dataset, we are able to compare the F1-scores to evaluate how effectively each model could predict drug usage based on personality type information. 
@@ -794,7 +799,7 @@ plot_data = rbind(
 ggplot(plot_data, aes(x = Drug, y = F1, fill = Model)) +
   geom_bar(stat = "identity", position = "dodge") +
   theme_minimal() +
-  labs(title = "F1-Score Comparison: MLP vs RNN", y = "F1 Score") +
+  labs(tag= "Figure 9", title = "F1-Score Comparison: MLP vs RNN", y = "F1 Score") +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
   
