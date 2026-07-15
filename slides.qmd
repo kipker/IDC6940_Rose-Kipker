@@ -97,8 +97,7 @@ RNN
 
 ## Data Exploration and Visualization {.smaller}
 
-A study was conducted to determine how...
-
+Visual of class imbalance: Figure 1
 ```{r, warning=FALSE, echo=F, message=FALSE}
 # loading packages 
 library(tidyverse)
@@ -106,26 +105,210 @@ library(knitr)
 library(ggthemes)
 library(ggrepel)
 library(dslabs)
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(readr)
+library(ucimlrepo)
+library(patchwork)
+library(reshape2)
+library(igraph)
+library(ggnetwork)
+library(ggradar) 
+library(caret)
+library(keras3)
+library(tensorflow)
+library(yardstick)
+
 ```
 
 ```{r, warning=FALSE, echo=F}
-# Load Data
-#kable(head(murders))
 
-ggplot1 = murders %>% ggplot(mapping = aes(x=population/10^6, y=total)) 
+drug_data = fetch_ucirepo(id=373)
+data = drug_data$data$original
+drug_cols = c(
+  "alcohol", "amphet", "amyl", "benzos", "caff", "cannabis", "choc", 
+  "coke", "crack", "ecstasy", "heroin", "ketamine", "legalh", "lsd", 
+  "meth", "mushrooms", "nicotine", "semer", "vsa"
+)
 
-  ggplot1 + geom_point(aes(col=region), size = 4) +
-  geom_text_repel(aes(label=abb)) +
-  scale_x_log10() +
-  scale_y_log10() +
-  geom_smooth(formula = "y~x", method=lm,se = F)+
-  xlab("Populations in millions (log10 scale)") + 
-  ylab("Total number of murders (log10 scale)") +
-  ggtitle("US Gun Murders in 2010") +
-  scale_color_discrete(name = "Region")+
-      theme_bw()
+target_drugs = c(
+  "amphet", "amyl", "benzos", "cannabis",
+  "coke", "crack", "ecstasy", "heroin", "ketamine", "legalh", "lsd", 
+  "meth", "mushrooms", "nicotine", "vsa"
+)
+data_cleaned = data %>%
+  filter(semer == "CL0")
+data_all_binary = data_cleaned %>%
+  mutate(across(
+    .cols = all_of(drug_cols),
+    .fns = ~ ifelse(. %in% c("CL3", "CL4", "CL5", "CL6"), 1, 0)
+  ))
+
+X_data = data_all_binary %>%
+  select(nscore, escore, oscore, ascore, cscore, impuslive, ss) %>%
+  as.matrix()
+y_matrix = data_all_binary %>%
+  select(all_of(target_drugs)) %>%
+  as.matrix()
+y_matrix1 = data_all_binary %>%
+  select(all_of(drug_cols)) %>%
+  as.matrix()
+
+imbalance_plot_data = as.data.frame(y_matrix) %>%
+  gather (key = "Drug", value = "Status") %>%
+  mutate (Status = ifelse(Status == 1, "User", "Non-User"))
+
+imbalance_plot_data1 = as.data.frame(y_matrix1) %>%
+  gather (key = "Drug", value = "Status") %>%
+  mutate (Status = ifelse(Status == 1, "User", "Non-User"))
+
+ggplot(imbalance_plot_data1, aes (x = reorder(Drug, Status == "User", FUN = sum), fill = Status)) +
+  geom_bar(position = "fill") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_manual(values = c("Non-User"= "gray", "User" = "blue"))+
+  coord_flip() +
+  labs(
+    tag = "Figure 1",
+    title = "Class Imbalance Across All 18 Target Substances",
+    x = "Substance",
+    y = "Percentage of Dataset",
+    fill = "Classification"
+  ) +
+  theme_minimal()
   
 
+```
+
+
+## Psychological footprints
+
+similarities noticed between users
+```{r, warning=FALSE, echo=F}
+min_max_scale = function(x) {
+  (x - min(x, na.rm = TRUE)) / (max(x, na.rm = TRUE) - min(x, na.rm = TRUE))
+}
+
+# Scaling the raw respondent traits globally
+data_scaled_global = data_all_binary %>%
+  mutate(across(c(nscore, escore, oscore, ascore, cscore, impuslive, ss), min_max_scale))
+
+# Preparing aggregate averages for cannabis
+footprint_cannabis = data_scaled_global %>%
+  group_by(cannabis) %>%
+  summarise(across(c(nscore, escore, oscore, ascore, cscore, impuslive, ss), mean)) %>%
+  rename(group = cannabis) %>%
+  mutate(group = ifelse(group == 1, "Cannabis User", "Non-User"))
+
+colnames(footprint_cannabis) <- c("group", "Neuroticism", "Extraversion", "Openness", "Agreeableness", "Conscientiousness", "Impulsivity", "Sensation_Seeking")
+
+# Generating the Radar Chart explicitly using cannabis object
+p1 = ggradar(
+  plot.data = footprint_cannabis,
+  grid.min = 0, grid.mid = 0.5, grid.max = 0.7,
+  values.radar = c("0%", "50%", "70%"),
+  group.point.size = 3, group.line.width = 1, legend.position = "bottom",
+  
+  axis.label.size = 3.5,     # Shrinks trait names (Neuroticism, Impulsivity, etc.)
+  grid.label.size = 3,       # Shrinks the percentage labels (0%, 50%, 100%)
+  legend.text.size = 9       # Shrinks the legend text at the bottom
+) + 
+  labs(
+    title = "Cannabis Consumption", 
+    tag = "Figure 4"
+  ) +
+  theme(
+    plot.tag = element_text(size = 10, face = "bold"),           # Neat, small"Figure 4"
+    plot.title = element_text(size = 12, face = "bold"),         # Small, crisp title
+    legend.title = element_text(size = 9)                        # Small legend title
+  )
+
+
+# Scaling the raw respondent traits globally 
+data_scaled_global = data_all_binary %>%
+  mutate(across(c(nscore, escore, oscore, ascore, cscore, impuslive, ss), min_max_scale))
+
+# Preparing aggregate averages for crack
+footprint_crack = data_scaled_global %>%
+  group_by(crack) %>%
+  summarise(across(c(nscore, escore, oscore, ascore, cscore, impuslive, ss), mean)) %>%
+  rename(group = crack) %>%
+  mutate(group = ifelse(group == 1, "Crack User", "Non-User"))
+
+colnames(footprint_crack) = c("group", "Neuroticism", "Extraversion", "Openness", "Agreeableness", "Conscientiousness", "Impulsivity", "Sensation_Seeking")
+
+# Generating the Radar Chart explicitly using the new crack object
+p2= ggradar(
+  plot.data = footprint_crack,
+  grid.min = 0, grid.mid = 0.5, grid.max = 0.7,
+  values.radar = c("0%", "50%", "70%"),
+  group.point.size = 3, group.line.width = 1, legend.position = "bottom",
+  
+  axis.label.size = 3.5,     
+  grid.label.size = 3,       
+  legend.text.size = 9       
+) + 
+  labs(
+    title = "Crack Consumption", 
+    tag = "Figure 5"
+  ) +
+  theme(
+    plot.tag = element_text(size = 10, face = "bold"),           # Neat, small "Figure 5"
+    plot.title = element_text(size = 12, face = "bold"),         # Small, crisp title
+    legend.title = element_text(size = 9)                        # Small legend title
+  )
+p1 + p2
+```
+
+## 
+```{r, warning=FALSE, echo=F}
+drug_corr = cor(y_matrix) 
+diag(drug_corr) = 0 
+
+# Filtering out weak connections
+drug_corr[abs(drug_corr) < 0.25] = 0 
+
+# Building the network object
+network_structure = graph_from_adjacency_matrix(drug_corr, weighted = TRUE, mode = "undirected")
+
+# Generating spaced coordinates using a scaling trick
+set.seed(123) 
+
+# We pass an inverse weight array (1 - correlation) or a fixed small weight 
+# to force the Fruchterman-Reingold layout to push nodes further apart
+spaced_layout = layout_with_fr(
+  network_structure, 
+  niter = 1500, 
+  weights = rep(0.1, ecount(network_structure)) # Lower weight = weaker springs = more spread out!
+)
+
+# Converting to ggnetwork using our custom spaced coordinates
+network_data = ggnetwork(network_structure, layout = spaced_layout)
+
+# Plotting the spacious layout
+ggplot(network_data, aes(x = x, y = y, xend = xend, yend = yend)) +
+  
+  # Mapping link color to the correlation weight and make lines thicker
+  geom_edges(aes(color = weight), size = 1.2, alpha = 0.8) +
+  
+  # Gradient palette for the links (e.g., yellow to red for low to high correlation)
+  scale_color_viridis_c(option = "plasma", name = "Correlation\nStrength", direction = -1) +
+  
+  # Uniform node coloring (a clean slate grey or dark blue so the links pop)
+  geom_nodes(color = "gray", size = 6) +
+  
+  # Labels positioned neatly over the nodes
+  geom_nodetext(aes(label = name), fontface = "bold", color = "black", size = 4) +
+  
+  theme_blank() +
+  labs(
+    tag = "Figure 6",
+    title = "The Web of Substance Co-occurrence",
+    subtitle = "Link colors reflect correlation strength (Threshold > 0.25)"
+  ) +
+  theme(
+    legend.position = "right"
+  )
 ```
 
 ## Modeling and Results
@@ -138,9 +321,217 @@ ggplot1 = murders %>% ggplot(mapping = aes(x=population/10^6, y=total))
 
 -   **Tell a story about what the data reveals.**
 
-```{r}
+## The MLP
 
+```{r, warning=FALSE, echo=F}
+set.seed(10)
+
+# By using this method, individuals that use more than one drug will be evenly distributed
+composite_score = as.factor(rowSums(y_matrix))
+
+# Conducting the 80/20 split
+train_indices = createDataPartition(composite_score, p = 0.80, list = FALSE)
+
+X_train = X_data[train_indices,]
+X_test = X_data[-train_indices,]
+y_train = y_matrix[train_indices,]
+y_test = y_matrix[-train_indices,]
+
+inputs = layer_input(shape = c(7))
+
+outputs = inputs %>%
+  layer_dense(units = 64, activation = 'relu') %>%
+  layer_dropout(rate = 0.3) %>%
+  layer_dense(units = 32, activation = 'relu') %>%
+  layer_dropout(rate = 0.2) %>%
+  layer_dense(units = 15, activation = 'sigmoid')
+
+mlp_model = keras_model(input = inputs, output = outputs)
+
+# Compiling the model
+mlp_model %>% compile(
+  optimizer = 'adam',
+  loss = 'binary_crossentropy',
+  metrics = c('binary_accuracy')
+)
+history = mlp_model %>% fit(
+  x = X_train,
+  y = y_train,
+  epochs = 20, 
+  batch_size = 32,
+  validation_split = 0.2,
+  verbose = 0
+)
+plot(history)
 ```
+## hit or miss? 
+```{r}
+all_probs = predict(mlp_model, X_test, verbose = 0)
+all_preds = ifelse(all_probs >= 0.5, 1, 0)
+colnames(all_preds) = target_drugs
+
+# Ensure y_test matches all_preds in dimension and order
+# Convert y_test to a clean matrix and align columns with your target drugs
+y_test_matrix = as.matrix(y_test[, target_drugs])
+
+# Double checking rows
+if (nrow(y_test_matrix) != nrow(all_preds)) {
+  y_test_matrix = tail(y_test_matrix, nrow(all_preds)) 
+}
+
+# Calculating correctness element-by-element 
+is_correct = (all_preds == y_test_matrix)
+
+# Converting to dataframe and adding Participant IDs
+df_correct = as.data.frame(is_correct)
+df_correct$Participant = 1:nrow(df_correct)
+
+# Reshaping to long format for ggplot
+df_correct_long = df_correct %>%
+  pivot_longer(cols = -Participant, names_to = "Drug", values_to = "Accuracy") %>%
+  mutate(Classification = ifelse(Accuracy == 1, "Correct (Hit)", "Incorrect (Error)"))
+
+# Filtering for the first 50 participants 
+df_correct_subset = df_correct_long %>% filter(Participant <= 50)
+
+# Creating the Evaluation Heatmap
+ggplot(data = df_correct_subset, aes(x = Drug, y = factor(Participant), fill = Classification)) +
+  geom_tile(color = "white", size = 0.1) + 
+  scale_fill_manual(values = c("Correct (Hit)" = "#2ecc71", "Incorrect (Error)" = "#e74c3c")) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+    panel.grid = element_blank()
+  ) +
+  labs(
+    tag = "Figure 8",
+    title = "Model Prediction Accuracy Matrix",
+    subtitle = "Ground Truth vs. MLP Binary Predictions (First 50 Test Participants)",
+    x = "Substance",
+    y = "Participant ID",
+    fill = "Model Outcome"
+  )
+```
+
+
+## The RNN
+```{r}
+X_train_rnn = array_reshape(as.matrix(X_train), c(nrow(X_train), 7, 1))
+X_test_rnn = array_reshape(as.matrix(X_test), c(nrow(X_test), 7, 1))
+
+# RNN model
+inputs = layer_input(shape = c(7, 1)) 
+outputs = inputs %>%
+  layer_lstm(units = 64) %>%  
+  layer_dense(units = 15, activation = 'sigmoid')
+
+rnn_model = keras_model(inputs = inputs, outputs = outputs)
+
+rnn_model %>% compile(
+  optimizer = 'adam',
+  loss = 'binary_crossentropy',
+  metrics = c('binary_accuracy') # Tracks binary accuracy over epochs
+)
+
+# Fitting the model 
+rnn_history = rnn_model %>% fit(
+  x = X_train_rnn,
+  y = y_train,
+  epochs = 20,
+  batch_size = 32,
+  validation_split = 0.2,
+  verbose = 0
+)
+
+#
+plot(rnn_history)
+```
+
+## MLP vs RNN
+
+```{r}
+pred_probs = predict(mlp_model, X_test, verbose = 0)
+#summary(pred_probs)
+pred_binary = ifelse(pred_probs > 0.5, 1, 0)
+results = data.frame(truth = as.matrix(y_test, estimate = pred_binary))
+
+# Calculating for each drug individually with dynamic thresholds
+eval_results_mlp = data.frame()
+
+for(i in 1:ncol(y_test)){
+  drug_name = target_drugs[i]
+  
+  # Using the median predicted probability for this specific drug
+  # alternative: use mean(pred_probs[, i])
+  current_threshold = median(pred_probs[, i]) 
+  
+  # Converting to binary using this column's unique threshold
+  binary_preds = ifelse(pred_probs[, i] > current_threshold, 1, 0)
+  
+  truth_vec    = factor(y_test[, i], levels = c(0, 1))
+  estimate_vec = factor(binary_preds, levels = c(0, 1))
+  
+  # Calculating metrics 
+  f1   = f_meas_vec(truth_vec, estimate_vec, event_level = "second")
+  prec = precision_vec(truth_vec, estimate_vec, event_level = "second")
+  rec  = recall_vec(truth_vec, estimate_vec, event_level = "second")
+  
+  eval_results_mlp = rbind(eval_results_mlp, data.frame(
+    Drug = drug_name, 
+    Threshold = current_threshold, # tracked to see what was used
+    F1 = ifelse(is.na(f1), 0, f1),
+    Precision = ifelse(is.na(prec), 0, prec),
+    Recall = ifelse(is.na(rec), 0, rec)
+  ))
+}
+
+pred_probs_rnn = predict(rnn_model, X_test_rnn, verbose = 0)
+pred_binary_rnn = ifelse(pred_probs > 0.5, 1, 0)
+results = data.frame(truth = as.matrix(y_test, estimate = pred_binary_rnn))
+
+# Calculating for each drug individually with dynamic thresholds
+eval_results_rnn = data.frame()
+
+for(i in 1:ncol(y_test)){
+  drug_name = target_drugs[i]
+  
+  # Using the median predicted probability for this specific drug
+  # alternative: use mean(pred_probs[, i])
+  current_threshold = median(pred_probs_rnn[, i]) 
+  
+  # Converting to binary using this column's unique threshold
+  binary_preds = ifelse(pred_probs_rnn[, i] > current_threshold, 1, 0)
+  
+  truth_vec    = factor(y_test[, i], levels = c(0, 1))
+  estimate_vec = factor(binary_preds, levels = c(0, 1))
+  
+  # Calculating metrics 
+  f1   = f_meas_vec(truth_vec, estimate_vec, event_level = "second")
+  prec = precision_vec(truth_vec, estimate_vec, event_level = "second")
+  rec  = recall_vec(truth_vec, estimate_vec, event_level = "second")
+  
+  eval_results_rnn = rbind(eval_results_rnn, data.frame(
+    Drug = drug_name, 
+    Threshold = current_threshold, # tracked to see what was used
+    F1 = ifelse(is.na(f1), 0, f1),
+    Precision = ifelse(is.na(prec), 0, prec),
+    Recall = ifelse(is.na(rec), 0, rec)
+  ))
+}
+
+plot_data = rbind(
+  mutate(eval_results_mlp, Model = "MLP"),
+  mutate(eval_results_rnn, Model = "RNN")
+)
+
+ggplot(plot_data, aes(x = Drug, y = F1, fill = Model)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme_minimal() +
+  labs(tag= "Figure 9", title = "F1-Score Comparison: MLP vs RNN", y = "F1 Score") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+
 
 ## Conclusion
 

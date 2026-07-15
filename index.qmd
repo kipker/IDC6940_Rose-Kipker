@@ -108,6 +108,7 @@ $$o_t = \sigma(W_o x_t + U_o h_{t-1} + b_o)$$
   Regarding substance use, participants reported their use of 18 legal and illegal drugs. For each substance, respondents selected from seven usage frequency categories: never used, used over a decade ago, used in the last decade, year, month, week, or day. These categorical responses were then quantified into numerical values by the original researchers, allowing the data to be processed by both statistical and machine learning models as continuous features. 
 
   Table 1 below provides an overview of the features used in this study. While the personality traits are represented as continuous values, the substance usage is represented using a scale from 0 to 6 in the literature. In Table 1, the drug use intensity responses were converted to a 1 (never used) to 7 (used in the past day) numeric index during data processing for our later modeling purposes. 
+  
 ```{r}
 library(knitr)
 library(psych)
