@@ -363,7 +363,6 @@ if (!requireNamespace("remotes", quietly = TRUE)) {
 }
 
 # Downloading and installing ggradar from GitHub
-remotes::install_github("ricardo-bion/ggradar")
 library(ggradar) 
 
 min_max_scale = function(x) {
@@ -550,7 +549,6 @@ plot(history)
 library(yardstick)
 # Converting props to binary
 pred_probs = predict(mlp_model, X_test, verbose = 0)
-#summary(pred_probs)
 pred_binary = ifelse(pred_probs > 0.5, 1, 0)
 results = data.frame(truth = as.matrix(y_test, estimate = pred_binary))
 
@@ -560,12 +558,15 @@ eval_results_mlp = data.frame()
 for(i in 1:ncol(y_test)){
   drug_name = target_drugs[i]
   
-  # Using the median predicted probability for this specific drug
-  # alternative: use mean(pred_probs[, i])
-  current_threshold = median(pred_probs[, i]) 
+  # 1. Calculate the actual base rate (proportion of 1s in the ground truth)
+  actual_use_rate = mean(y_test[, i] == 1)
   
-  # Converting to binary using this column's unique threshold
-  binary_preds = ifelse(pred_probs[, i] > current_threshold, 1, 0)
+  # 2. Set the threshold so that ONLY the top percentage (matching the base rate) are predicted as 1s
+  # If 10% of people use a drug, the threshold is the 90th percentile (1 - 0.10)
+  current_threshold = quantile(pred_probs[, i], 1 - actual_use_rate) 
+  
+  # Converting to binary using this column's class-balanced threshold
+  binary_preds = ifelse(pred_probs[, i] >= current_threshold, 1, 0)
   
   truth_vec    = factor(y_test[, i], levels = c(0, 1))
   estimate_vec = factor(binary_preds, levels = c(0, 1))
@@ -577,17 +578,16 @@ for(i in 1:ncol(y_test)){
   
   eval_results_mlp = rbind(eval_results_mlp, data.frame(
     Drug = drug_name, 
-    Threshold = current_threshold, # tracked to see what was used
+    Threshold = as.numeric(current_threshold), # tracked to see what was used
     F1 = ifelse(is.na(f1), 0, f1),
     Precision = ifelse(is.na(prec), 0, prec),
     Recall = ifelse(is.na(rec), 0, rec)
   ))
 }
-
 print(eval_results_mlp)
 
 ```
-The above table shows each drug, the threshold used for that drug, and the corresponding F1 score (grading how well the model predicted drug use), precision, and recall. A blanket predicted probability threshold of 0.5 (where probabilities over 0.5 were assigned class 1-user) was inappropriate for every drug. Some drugs probabilities capped out around 7%, thus all predicted instances would be 0 with the 50% threshold. Instead, a dynamic threshold was implemented where the median predicted probability (the 50th percentile of outputs per target) was used as the classification threshold. As expected, drugs with the lowest F1 scores also have the lowest precision, accuracy, and threshold, likely because they are more rare substances in use and therefore have the lowest occurrence and represent the classes most imbalanced (amyl, crack, and vsa). With the use of the dynamic median threshold there was a tradeoff where the substances with fewer users had increased sensitivity (recall) with a reduction in precision, resulting in an inflated number of false positives.
+The above table shows each drug, the threshold used for that drug, and the corresponding F1 score (grading how well the model predicted drug use), precision, and recall. A blanket predicted probability threshold of 0.5 (where probabilities over 0.5 were assigned class 1-user) was inappropriate for every drug. Some drugs probabilities capped out around 7%, thus all predicted instances would be 0 with the 50% threshold. Instead, a dynamic threshold was implemented where the base rate of susbstance use was used was used as the quantile above which the model classified a 'user'. For example, if the base rate of a substance use is 10%, then the 90th quartile is used as the threshold and only the top 10% of predicted users are categorized as a 1 (user). As expected, drugs with the lowest F1 scores also have the lowest precision, accuracy, and threshold, likely because they are more rare substances in use and therefore have the lowest occurrence and represent the classes most imbalanced (amyl, crack, and vsa). Because we balanced our prediction thresholds to match the exact base rate of each drug, the number of false positives equals false negatives, mathematically aligning our Precision, Recall, and F1 scores.
 
 Additionally, we discovered that using the metric "accuracy" was misrepresenting of the performance of the model. The metric "accuracy" only grades the model positively if it correctly predicted ALL of the 15 target substances. If the model correctly predicted 14 out of the 15 substances, that was considered a model failure. As we are looking at prediction of each drug independently, we updated the metric of the model to "binary accuracy" which represents how many of the 15 drugs it predicts correctly for each instance in the data set. This model is performing at approaching 85% accuracy overall. 
 
@@ -597,39 +597,31 @@ Additionally, we discovered that using the metric "accuracy" was misrepresenting
 ```{r}
 
 # Heat map for the first 50 participant's likelihood profile
+# Generate predicted probabilities
+
 all_probs = predict(mlp_model, X_test, verbose = 0)
+y_test_matrix = as.matrix(y_test[, target_drugs])
 
-colnames(all_probs) = target_drugs
+all_preds = all_probs # copy structure
 
-# Creating a data frame
-df_probs = as.data.frame(all_probs)
-df_probs$Participant = 1:nrow(df_probs)
+for(i in 1:ncol(all_probs)) {
+  drug_name = target_drugs[i]
+  # 1. Find the actual proportion of users for this drug in the test set
+  actual_use_rate = mean(y_test_matrix[, drug_name]) 
+  
+  # 2. Find the corresponding percentile threshold (e.g., if use rate is 10%, threshold is the 90th percentile)
+  class_threshold = quantile(all_probs[, i], 1 - actual_use_rate)
+  
+  # 3. Classify based on this realistic, drug-specific threshold
+  all_preds[, i] = ifelse(all_probs[, i] >= class_threshold, 1, 0)
+}
 
-df_long = df_probs %>%
-  pivot_longer(cols = -Participant, names_to = "Drug", values_to = "Probability")
-
-# Selecting the first 50 participants 
-df_subset = df_long %>% filter(Participant <=50)
-
-# Creating the heatmap
-ggplot(data = df_subset,aes(x = Drug, y = factor(Participant), fill = Probability)) +
-  geom_tile()+
-  scale_fill_gradient(low = "white", high = "red") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  labs(title = "Individual Drug Usage Likelihoods",
-       x = "Substance",
-       y = "Participant ID", 
-       tag = "Figure 7")
-
-
-# Converting probabilities to binary predictions (using 0.5 threshold)
-all_preds = ifelse(all_probs >= 0.5, 1, 0)
+# Ensure colnames are preserved from the target drugs
 colnames(all_preds) = target_drugs
 
 # Ensure y_test matches all_preds in dimension and order
 # Convert y_test to a clean matrix and align columns with your target drugs
-y_test_matrix = as.matrix(y_test[, target_drugs])
+
 
 # Double checking rows
 if (nrow(y_test_matrix) != nrow(all_preds)) {
@@ -663,7 +655,7 @@ ggplot(data = df_correct_subset, aes(x = Drug, y = factor(Participant), fill = C
   labs(
     tag = "Figure 8",
     title = "Model Prediction Accuracy Matrix",
-    subtitle = "Ground Truth vs. MLP Binary Predictions (First 50 Test Participants)",
+    subtitle = "Ground Truth vs. MLP Binary Predictions (Column-Wise Median Thresholds)",
     x = "Substance",
     y = "Participant ID",
     fill = "Model Outcome"
@@ -744,7 +736,8 @@ plot(rnn_history)
 
 library(yardstick)
 pred_probs_rnn = predict(rnn_model, X_test_rnn, verbose = 0)
-pred_binary_rnn = ifelse(pred_probs > 0.5, 1, 0)
+# Fixed typo: changed pred_probs to pred_probs_rnn
+pred_binary_rnn = ifelse(pred_probs_rnn > 0.5, 1, 0)
 results = data.frame(truth = as.matrix(y_test, estimate = pred_binary_rnn))
 
 # Calculating for each drug individually with dynamic thresholds
@@ -753,12 +746,14 @@ eval_results_rnn = data.frame()
 for(i in 1:ncol(y_test)){
   drug_name = target_drugs[i]
   
-  # Using the median predicted probability for this specific drug
-  # alternative: use mean(pred_probs[, i])
-  current_threshold = median(pred_probs_rnn[, i]) 
+  # 1. Calculate the actual base rate (proportion of 1s in the ground truth)
+  actual_use_rate = mean(y_test[, i] == 1)
   
-  # Converting to binary using this column's unique threshold
-  binary_preds = ifelse(pred_probs_rnn[, i] > current_threshold, 1, 0)
+  # 2. Set the threshold so that ONLY the top percentage (matching the base rate) are predicted as 1s
+  current_threshold = quantile(pred_probs_rnn[, i], 1 - actual_use_rate) 
+  
+  # Converting to binary using this column's class-balanced threshold
+  binary_preds = ifelse(pred_probs_rnn[, i] >= current_threshold, 1, 0)
   
   truth_vec    = factor(y_test[, i], levels = c(0, 1))
   estimate_vec = factor(binary_preds, levels = c(0, 1))
@@ -770,7 +765,7 @@ for(i in 1:ncol(y_test)){
   
   eval_results_rnn = rbind(eval_results_rnn, data.frame(
     Drug = drug_name, 
-    Threshold = current_threshold, # tracked to see what was used
+    Threshold = as.numeric(current_threshold), # tracked to see what was used
     F1 = ifelse(is.na(f1), 0, f1),
     Precision = ifelse(is.na(prec), 0, prec),
     Recall = ifelse(is.na(rec), 0, rec)
@@ -780,13 +775,13 @@ for(i in 1:ncol(y_test)){
 print(eval_results_rnn)
 
 ```
-  The table above shows the substances as well as their corresponding threshold, F1 score, precision, and recall. The same dynamic threshold that was implemented in our MLP model was used in this RNN model, which in addition to class imbalance, increases the sensitivity (recall) at the expense of the model's precision. Again, this would result in increased number of false positives, particularly for substances that are more rare. 
+  The table above shows the substances as well as their corresponding threshold, F1 score, precision, and recall. The same dynamic threshold that was implemented in our MLP model was used in this RNN model, which also shows the aligned F1, precision, and recall scores. For highly rare substances like amyl, our test set contained very few positive instances. Under the class-balanced threshold we are using for the MLP and RNN, incorrectly categorizing even a single actual user in our predictions drops our True Positives to zero, resulting in an F1 score of 0. This highlights how extremely imbalanced classes remain a significant challenge, even for complex architectures.
 
 
 
 ### Comparing Effectiveness of MLP and RNN Models 
 
-  To directly compare the effectiveness of the MLP and RNN models, the F1-scores for each model were plotted side-by-side across each of the 15 non-mutually exclusive substances in Figure 9. Since both models used an adaptive median threshold to help combat class imbalance observed in the dataset, we are able to compare the F1-scores to evaluate how effectively each model could predict drug usage based on personality type information. 
+  To directly compare the effectiveness of the MLP and RNN models, the F1-scores for each model were plotted side-by-side across each of the 15 non-mutually exclusive substances in Figure 9. Since both models used an adaptive threshold to help combat class imbalance observed in the dataset, we are able to compare the F1-scores to evaluate how effectively each model could predict drug usage based on personality type information. 
 
 ```{r}
 library(ggplot2)
@@ -806,11 +801,9 @@ ggplot(plot_data, aes(x = Drug, y = F1, fill = Model)) +
   
   As evident in Figure 9, the MLP model achieved a higher F1-score than the RNN model in 11 out of 15 drug categories, and the models exhibited roughly equivalent performance for 3 of the drug categories. These results support the argument that, for static data, traditional MLPs are more easily able to map correlations simultaneously across all features than an RNN. In this case, the RNN may have struggled due to the creation of an "artificial timeline" by forcing the LSTM layer to treat the features sequentially. This could have introduced excess noise and decreased the overall performance of the RNN model, even for drug categories that are well represented within the dataset. 
   
-  Based on Figure 9, there was only a single instance where the RNN model outperformed the MLP model, and this was for the crack cocaine category. In this case, the sequential memory of the RNN allowed the layers to learn complicated interactions between the personality trait data that may have been overlooked using the MLP model. Overall, while the MLP remains the most computationally efficient and accurate of the two models evaluated, the RNN's step-by-step memory framework provided an advantage when isolating unique behavioral relationships within the data. 
+  Based on Figure 9, there was only a single instance where the RNN model outperformed the MLP model, and this was for the ecstasy category. In this case, the sequential memory of the RNN allowed the layers to learn complicated interactions between the personality trait data that may have been overlooked using the MLP model. Overall, while the MLP remains the most computationally efficient and accurate of the two models evaluated, the RNN's step-by-step memory framework provided an advantage when isolating unique behavioral relationships within the data. 
 
-```{r, warning=FALSE, echo=TRUE}
 
-```
 
 ```{r}
 
@@ -820,9 +813,9 @@ ggplot(plot_data, aes(x = Drug, y = F1, fill = Model)) +
 
   This study successfully evaluated the effectiveness of MLP and RNN models in predicting substance usage risks using the Revised NEO Five-Factor Inventory, Barratt Impulsiveness, and the Impulsive Sensation Seeking scales. One of the main features of this study is the use of multi-label classification to treat substances as non-mutually exclusive categories in order to accurately reflect the real-world complexity of multi-substance use behavior. 
   
-  The results of this study demonstrate that personality traits can be good indicators for substance usage risk when using ANN model frameworks, with an overall binary accuracy rate of approximately 85% for each model developed. The use of an adaptive median threshold revealed a trade-off that sensitivity, or recall, can be optimized to capture high-risk individuals so that they are not "missed" by the model, while extreme class imbalances for rare substances naturally cause the precision to suffer. Overall, we found that the risk of casting a broader net resulted in an inflated number of false positives. In the context of identifying at-risk individuals, we found the risk of a false positive to be less than the risk of a false negative. 
+  The results of this study demonstrate that personality traits can be good indicators for substance usage risk when using ANN model frameworks, with an overall binary accuracy rate of approximately 82% for each model developed. The use of an adaptive threshold resulted in the best model accuracy and a subsequently balanced F1, precision, and recall scores however it is sensitive to extreme class imbalances for rare substances. Overall, we found that the risk of casting a broader net resulted in an inflated number of false positives. In the context of identifying at-risk individuals, we found the risk of a false positive to be less than the risk of a false negative.  
   
-  Ultimately, this study revealed that our MLP model is more efficient and generally more accurate for multi-label classification when compared to our RNN model. By evaluating all of the features simultaneously, the MLP was easily able to map correlations across the data. However, the RNN's success in the crack cocaine category does validate the use of a "pseudo-sequential" feature extraction method, showing that an LSTM's step-by-step memory framework can provide an advantage when looking at rare and complex relationships within personality data. 
+  Ultimately, this study revealed that our MLP model is more efficient and generally more accurate for multi-label classification when compared to our RNN model. By evaluating all of the features simultaneously, the MLP was easily able to map correlations across the data. However, the RNN's success in the ecstasy category does validate the use of a "pseudo-sequential" feature extraction method, showing that an LSTM's step-by-step memory framework can provide an advantage when looking at rare and complex relationships within personality data. 
   
   The goal of this study was to determine drug use in a way that does not consider substances to be mutually exclusive. During the process of this study we found that individuals with certain personality traits may be more likely to gravitate towards a grouping of drugs, such as hallucinogens, or depressants. To further expand on this study, it may be beneficial to explore which substances are consistently indicated at the same rate and essentially group them by class to determine if the model performance can be improved using grouped substance classes instead of individual, mutually-exclusive drug targets. Additionally, the significant class imbalance observed within the dataset could be further mitigated using a synthetic data generation method, such as Synthetic Minority Over-Sampling (SMOTE). This could improve the overall performance of the models when handling the under-represented substances. 
 

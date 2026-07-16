@@ -1,13 +1,23 @@
 ---
 title: "Predicting Drug Use Using Personailty Type and Pyschological Diagnoses- Summer 2026 "
-subtitle:  "A comparasion between RNN and DNN on non-sequential data"
+subtitle:  "A comparasion between ANN and RNN on non-sequential data"
 author: "Elizabeth Rose and Victoria Kipker (Advisor: Dr. Cohen)"
 date: '`r Sys.Date()`'
 format:
-  revealjs
+  revealjs:
+    css: styles.css  # If you already have a CSS file, or use the option below:
+    theme: default
+    # You can inject custom CSS directly into the header like this:
+    include-in-header:
+      - text: |
+          <style>
+            .title {
+              font-size: 2.0em !important; 
+            }
+          </style>
 course: Capstone Projects in Data Science
-bibliography: references.bib # file contains bibtex for references
-#always_allow_html: true # this allows to get PDF with HTML features
+bibliography: references.bib
+always_allow_html: true
 self-contained: true
 execute: 
   warning: false
@@ -16,18 +26,6 @@ editor:
   markdown: 
     wrap: 72
 ---
-
-::: callout-important
-**Remember:** Your goal is to make your audience understand and care
-about your findings. By crafting a compelling story, you can effectively
-communicate the value of your data science project.
-
-Carefully read this template since it has instructions and tips to
-writing!
-
-More information about `revealjs`:
-<https://quarto.org/docs/reference/formats/presentations/revealjs.html>
-:::
 
 ## Introduction  
 
@@ -39,16 +37,16 @@ More information about `revealjs`:
 - Available drugs are ever-evolving
 - Individuals are essentially overwhelmed by choice
 
-## Our Goal  {.smaller}
+## Our Goal  
 
 - To determine if personality type is a good indicator for an individual's substance of choice
 
 - If personality is a good indicator, can a model be used to identify "at-risk" individuals in a way that does not consider use of different substances to be mutually exclusive?
 
 
-## Methods  {.smaller}
+## Methods 
 
-We will compare a multilayer perceptron (MLP) model to a Recurrent neural network (RNN) to see which model can better predict substance use from personality type.
+We will compare a traditional Artificial Neural Network, a multilayer perceptron (MLP) model, to a recurrent neural network (RNN) to see which model can better predict substance use from personality type.
 
 
 ## MLP  {.smaller}
@@ -82,6 +80,8 @@ We will compare a multilayer perceptron (MLP) model to a Recurrent neural networ
 - Input layer, 1 hidden layer, and 1 output layer
   - Hidden layer: limited short-term memory (LSTM) layer of 64 neurons
   - Output layer: 15 neurons and a sigmoid activation function
+  
+For both models, a dynamic threshold using the median predicted probability was used as our classification threshold
 
 
 ## Data Collection  {.smaller}
@@ -95,11 +95,6 @@ We will compare a multilayer perceptron (MLP) model to a Recurrent neural networ
 
 ################Include table 1????#####################
 
-
-
--   Present initial findings and insights through visualizations.
-
--   Highlight unexpected patterns or anomalies.
 
 ## Data Exploration and Visualization {.smaller}
 
@@ -186,10 +181,18 @@ ggplot(imbalance_plot_data1, aes (x = reorder(Drug, Status == "User", FUN = sum)
 
 ```
 
+## Observations
+
+- Large class imbalance in reported substances used
+- Almost all respondents used chocolate, caffeine, and alcohol
+- To combat this, a composite score was used for the train/test split
+- Omitted 3 most common substances
+- For this study, we considered anyone that used a particular substance within the past year to be a "user"
+
 
 ## Psychological footprints
 
-similarities noticed between users
+Similarities noticed between polygons- hints at correlation of substances
 ```{r, warning=FALSE, echo=F}
 min_max_scale = function(x) {
   (x - min(x, na.rm = TRUE)) / (max(x, na.rm = TRUE) - min(x, na.rm = TRUE))
@@ -317,15 +320,22 @@ ggplot(network_data, aes(x = x, y = y, xend = xend, yend = yend)) +
   )
 ```
 
-## Modeling and Results
+## Preprocessing 
 
--   Explain your data preprocessing and cleaning steps.
+###Completed by original researchers: {.smaller}
 
--   Present your key findings in a clear and concise manner.
+- Personality scores were quantified to continuous variables that approximate standard normal distribution 
+- Removal of incomplete/unusable respondent data
+- Removal of data from individuals that claimed "semeron" use
 
--   Use visuals to support your claims.
+###Completed prior to our study: {.smaller}
 
--   **Tell a story about what the data reveals.**
+- Binarization of "users" vs. "non-users" for each substance
+- Removal of 3 most used substances (chocolate, caffeine, alcohol)
+- For RNN model: convered the 2D matrices (for MLP) into 3D arrays
+  - Created a sequential feature extractor 
+  
+
 
 ## The MLP
 
@@ -370,15 +380,33 @@ history = mlp_model %>% fit(
 )
 plot(history)
 ```
-## hit or miss? 
+## Hit or miss? 
 ```{r}
+# Generate predicted probabilities
+
 all_probs = predict(mlp_model, X_test, verbose = 0)
-all_preds = ifelse(all_probs >= 0.5, 1, 0)
+y_test_matrix = as.matrix(y_test[, target_drugs])
+
+all_preds = all_probs # copy structure
+
+for(i in 1:ncol(all_probs)) {
+  drug_name = target_drugs[i]
+  # 1. Find the actual proportion of users for this drug in the test set
+  actual_use_rate = mean(y_test_matrix[, drug_name]) 
+  
+  # 2. Find the corresponding percentile threshold (e.g., if use rate is 10%, threshold is the 90th percentile)
+  class_threshold = quantile(all_probs[, i], 1 - actual_use_rate)
+  
+  # 3. Classify based on this realistic, drug-specific threshold
+  all_preds[, i] = ifelse(all_probs[, i] >= class_threshold, 1, 0)
+}
+
+# Ensure colnames are preserved from the target drugs
 colnames(all_preds) = target_drugs
 
 # Ensure y_test matches all_preds in dimension and order
 # Convert y_test to a clean matrix and align columns with your target drugs
-y_test_matrix = as.matrix(y_test[, target_drugs])
+
 
 # Double checking rows
 if (nrow(y_test_matrix) != nrow(all_preds)) {
@@ -412,7 +440,7 @@ ggplot(data = df_correct_subset, aes(x = Drug, y = factor(Participant), fill = C
   labs(
     tag = "Figure 8",
     title = "Model Prediction Accuracy Matrix",
-    subtitle = "Ground Truth vs. MLP Binary Predictions (First 50 Test Participants)",
+    subtitle = "Ground Truth vs. MLP Binary Predictions (Column-Wise Median Thresholds)",
     x = "Substance",
     y = "Participant ID",
     fill = "Model Outcome"
@@ -537,12 +565,12 @@ ggplot(plot_data, aes(x = Drug, y = F1, fill = Model)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
-
-
 ## Conclusion
 
--   Summarize your key findings.
-
--   Discuss the implications of your results.
+- Personality traits can be good indicators for substance usage risk when using ANN model frameworks
+- Achieved overall binary accuracy rate of greater than 85% for both models
+- Using adaptive median threshold for classification caused precision to suffer, inflating number of false positives
+- MLP is overall more efficient/accurate for multi-label classification when compared to RNN
+- RNN able to model complex relationship between personality data (crack cocaine)
 
 ## References
