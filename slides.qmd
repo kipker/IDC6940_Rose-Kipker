@@ -29,63 +29,69 @@ More information about `revealjs`:
 <https://quarto.org/docs/reference/formats/presentations/revealjs.html>
 :::
 
-## Introduction  {.smaller}
+## Introduction  
 
-Navigating the Modern Crisis:
+### Navigating the Modern Crisis:
+
 - Current mental health crisis accelerated by socioeconomic challenges and cognitive overload
 - Coping mechanisms or methods of escape are enticing
-- Many turn to unregulated online sources such as social media for self-diagnosis and medication
+- Many turn to unregulated online sources, such as social media, for self-diagnosis and medication
 - Available drugs are ever-evolving
 - Individuals are essentially overwhelmed by choice
 
-## Our Goal
+## Our Goal  {.smaller}
 
 - To determine if personality type is a good indicator for an individual's substance of choice
 
-- If personality is a good indicator, can a model be used to identify "at risk" individuals in a way that does not consider use of different substances to be mutually exclusive?
+- If personality is a good indicator, can a model be used to identify "at-risk" individuals in a way that does not consider use of different substances to be mutually exclusive?
 
 
-## Methods
+## Methods  {.smaller}
 
 We will compare a multilayer perceptron (MLP) model to a Recurrent neural network (RNN) to see which model can better predict substance use from personality type.
 
-## MLP
+
+## MLP  {.smaller}
 
 - Standard feed-forward architecture for structured, tabular data
 - Information flows in one direction
 - Neurons within same layer are not interconnected
-- Not the most advanced, but remained the benchmark when simplicity and efficiency are needed
+- Not the most advanced, but has remained the benchmark when simplicity and efficiency are needed
 
-## RNN
+
+## RNN  {.smaller}
 
 - Typically used for time series data
 - Incorporates short-term memory
 - Allows information to propagate through feedback loops
 - Neurons within same layer are interconnected
-- Model can maintain context across a sequence to link current and historical information 
+- Model can maintain context across a sequence to link current and historical information
 
-## Structure of Our Models
 
-MLP
+## Model Specifications  {.smaller}
+
+### MLP {.smaller}
+
 - Input layer, 2 hidden layers, and 1 output layer
   - First hidden layer: 64 neurons with Rectified Linear Unit (ReLU) activation
   - Second hidden layer: 32 neurons with ReLU activation
   - Output layer: 15 neurons with sigmoid activation (important for multi-label classification)
-  
-RNN
+ 
+### RNN {.smaller}
+
 - Input layer, 1 hidden layer, and 1 output layer
   - Hidden layer: limited short-term memory (LSTM) layer of 64 neurons
   - Output layer: 15 neurons and a sigmoid activation function
 
 
-## Data Collection
+## Data Collection  {.smaller}
 
 - Data collected via an online survey by Fehrman et al.
 - Survey included questions on drug use (18 legal and illegal substances), frequency of drug use, personality traits, and demographic information
 - Personality trait information collected using Revised NEO Five-Factor Inventory, Barratt Impulsiveness Scale, and Impulsive Sensation Seeking scale
 - Initially yielded results from 2,051 respondents (final sample size was 1,885)
 - Majority of respondents were from the UK (55.4%) and the US (29.5%)
-- Included fictitious drug "Semeron" as a validity check
+- Included fictitious drug "Semeron" as a validity check.
 
 ################Include table 1????#####################
 
