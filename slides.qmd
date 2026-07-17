@@ -646,8 +646,8 @@ ggplot(plot_data, aes(x = Drug, y = F1, fill = Model)) +
 ## Conclusion
 
 - Personality traits can be good indicators for substance usage risk when using ANN model frameworks
-- Achieved overall binary accuracy rate of greater than 85% for both models
-- Using adaptive median threshold for classification caused precision to suffer, inflating number of false positives
+- Achieved overall binary accuracy rate of greater than 82% for both models
+- Using adaptive median threshold for classification caused precision to suffer, inflating number of false positives, improved with base use threshold
 - MLP is overall more efficient/accurate for multi-label classification when compared to RNN
 - RNN able to model complex relationships between personality data (cocaine)
 
