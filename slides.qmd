@@ -1,6 +1,6 @@
 ---
 title: "Predicting Drug Use Using Personailty Type and Pyschological Diagnoses- Summer 2026 "
-subtitle:  "A comparasion between ANN and RNN on non-sequential data"
+subtitle:  "A comparasion between MLP and RNN on non-sequential data"
 author: "Elizabeth Rose and Victoria Kipker (Advisor: Dr. Cohen)"
 date: '`r Sys.Date()`'
 format:
@@ -33,7 +33,7 @@ editor:
 
 - Current mental health crisis accelerated by socioeconomic challenges and cognitive overload
 - Coping mechanisms or methods of escape are enticing
-- Many turn to unregulated online sources, such as social media, for self-diagnosis and medication
+- Many turn to unregulated online sources, such as social media or AI, for self-diagnosis and self-medication
 - Available drugs are ever-evolving
 - Individuals are essentially overwhelmed by choice
 
@@ -52,9 +52,13 @@ We will compare a traditional Artificial Neural Network, a multilayer perceptron
 ## MLP  {.smaller}
 
 - Standard feed-forward architecture for structured, tabular data
-- Information flows in one direction
-- Neurons within same layer are not interconnected
+- Information flows in one direction 
+- Neurons within same layer are not interconnected 
 - Not the most advanced, but has remained the benchmark when simplicity and efficiency are needed
+
+
+[@elmandouh2026comparing]
+[@przybyla2024multi]
 
 
 ## RNN  {.smaller}
@@ -64,6 +68,10 @@ We will compare a traditional Artificial Neural Network, a multilayer perceptron
 - Allows information to propagate through feedback loops
 - Neurons within same layer are interconnected
 - Model can maintain context across a sequence to link current and historical information
+
+
+[@elmandouh2026comparing]
+
 
 
 ## Model Specifications  {.smaller}
@@ -81,7 +89,13 @@ We will compare a traditional Artificial Neural Network, a multilayer perceptron
   - Hidden layer: limited short-term memory (LSTM) layer of 64 neurons
   - Output layer: 15 neurons and a sigmoid activation function
   
-For both models, a dynamic threshold using the median predicted probability was used as our classification threshold
+## Classification threshold  
+  
+For both models, a dynamic threshold using the base use rate was used as our classification threshold.
+
+e.g. if a drug had a use rate of 10% in the dataset, only the top 10% of predicted users will be given the class "1"
+
+We also tried median and mean dynamic thresholds with less success
 
 
 ## Data Collection  {.smaller}
@@ -93,7 +107,15 @@ For both models, a dynamic threshold using the median predicted probability was 
 - Majority of respondents were from the UK (55.4%) and the US (29.5%)
 - Included fictitious drug "Semeron" as a validity check.
 
+[@fehrman2017five]
+
+
 ## Variables
+
+Personality trait and drug use features collected by Fehrman et al. [@fehrman2017five] via online survey
+```{r}
+
+```
 
 ```{r}
 #| echo: false
@@ -101,7 +123,25 @@ For both models, a dynamic threshold using the median predicted probability was 
 #| warning: false
 library(tibble)
 library(gt)
+# Set R's seed
+set.seed(10)
 
+# Set environment variables and seeds for TensorFlow
+library(reticulate)
+py_run_string("
+import os
+os.environ['PYTHONHASHSEED'] = '10'
+import random
+random.seed(10)
+import numpy as np
+np.random.seed(10)
+import tensorflow as tf
+tf.random.set_seed(10)
+")
+
+library(keras)
+#redundant just in case above doesnt set the correct variable
+tensorflow::set_random_seed(10, disable_gpu = TRUE)
 # 1. Define the tibble first so R knows what it is
 variable_dictionary <- tibble(
   `Variable Name` = c(
@@ -224,15 +264,6 @@ ggplot(imbalance_plot_data1, aes (x = reorder(Drug, Status == "User", FUN = sum)
   
 
 ```
-
-## Observations
-
-- Large class imbalance in reported substances used
-- Almost all respondents used chocolate, caffeine, and alcohol
-- To combat this, a composite score was used for the train/test split
-- Omitted 3 most common substances
-  - For this study, we considered anyone that used a particular substance within the past year to be a "user"
-
 
 ## Psychological footprints
 
@@ -373,6 +404,7 @@ ggplot(network_data, aes(x = x, y = y, xend = xend, yend = yend)) +
 #### Performed prior to our study:
 
 - Binarization of "users" vs. "non-users" for each substance
+  - Use within the past year was considered a "user"
 - Removal of 3 most used substances (chocolate, caffeine, alcohol)
 - For RNN model: converted the 2D matrices (for MLP) into 3D arrays
   - Created a sequential feature extractor 
@@ -617,6 +649,6 @@ ggplot(plot_data, aes(x = Drug, y = F1, fill = Model)) +
 - Achieved overall binary accuracy rate of greater than 85% for both models
 - Using adaptive median threshold for classification caused precision to suffer, inflating number of false positives
 - MLP is overall more efficient/accurate for multi-label classification when compared to RNN
-- RNN able to model complex relationship between personality data (ecstasy)
+- RNN able to model complex relationships between personality data (cocaine)
 
 ## References

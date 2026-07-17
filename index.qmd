@@ -1,6 +1,6 @@
 ---
 title: "Predicting Drug Use Using Personailty Type and Pyschological Diagnoses- Summer 2026 "
-subtitle: "A comparasion between RNN and DNN on non-sequential data"
+subtitle: "A comparasion between MLP and RNN on non-sequential data"
 author: "Elizabeth Rose and Victoria Kipker (Advisor: Dr. Cohen)"
 date: '`r Sys.Date()`'
 format:
@@ -19,8 +19,7 @@ editor:
 engine: knitr
 ---
 
-Slides: [slides.html](slides.html){target="_blank"} ( Go to `slides.qmd`
-to edit)
+Slides: [slides.html](slides.html){target="_blank"}
 
 <style>
 body {
@@ -108,6 +107,27 @@ $$o_t = \sigma(W_o x_t + U_o h_{t-1} + b_o)$$
   Regarding substance use, participants reported their use of 18 legal and illegal drugs. For each substance, respondents selected from seven usage frequency categories: never used, used over a decade ago, used in the last decade, year, month, week, or day. These categorical responses were then quantified into numerical values by the original researchers, allowing the data to be processed by both statistical and machine learning models as continuous features. 
 
   Table 1 below provides an overview of the features used in this study. While the personality traits are represented as continuous values, the substance usage is represented using a scale from 0 to 6 in the literature. In Table 1, the drug use intensity responses were converted to a 1 (never used) to 7 (used in the past day) numeric index during data processing for our later modeling purposes. 
+```{r}
+# Set R's seed
+set.seed(10)
+
+# Set environment variables and seeds for TensorFlow
+library(reticulate)
+py_run_string("
+import os
+os.environ['PYTHONHASHSEED'] = '10'
+import random
+random.seed(10)
+import numpy as np
+np.random.seed(10)
+import tensorflow as tf
+tf.random.set_seed(10)
+")
+
+library(keras)
+#redundant just in case above doesnt set the correct variable
+tensorflow::set_random_seed(10, disable_gpu = TRUE)
+```
   
 ```{r}
 library(knitr)
@@ -516,7 +536,7 @@ library(keras3)
 library(tensorflow)
 # install.packages("keras3")
 
-
+set.seed(10)
 # Input layer
 inputs = layer_input(shape = c(7))
 
@@ -705,6 +725,8 @@ print(single_predictions_sorted)
 X_train_rnn = array_reshape(as.matrix(X_train), c(nrow(X_train), 7, 1))
 X_test_rnn = array_reshape(as.matrix(X_test), c(nrow(X_test), 7, 1))
 
+set.seed(10)
+
 # RNN model
 inputs = layer_input(shape = c(7, 1)) 
 outputs = inputs %>%
@@ -799,9 +821,9 @@ ggplot(plot_data, aes(x = Drug, y = F1, fill = Model)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
   
-  As evident in Figure 9, the MLP model achieved a higher F1-score than the RNN model in 11 out of 15 drug categories, and the models exhibited roughly equivalent performance for 3 of the drug categories. These results support the argument that, for static data, traditional MLPs are more easily able to map correlations simultaneously across all features than an RNN. In this case, the RNN may have struggled due to the creation of an "artificial timeline" by forcing the LSTM layer to treat the features sequentially. This could have introduced excess noise and decreased the overall performance of the RNN model, even for drug categories that are well represented within the dataset. 
+  As evident in Figure 9, the MLP model achieved a higher F1-score than the RNN model in 13 out of 15 drug categories, and the models exhibited roughly equivalent performance for 1 of the drug categories. These results support the argument that, for static data, traditional MLPs are more easily able to map correlations simultaneously across all features than an RNN. In this case, the RNN may have struggled due to the creation of an "artificial timeline" by forcing the LSTM layer to treat the features sequentially. This could have introduced excess noise and decreased the overall performance of the RNN model, even for drug categories that are well represented within the dataset. 
   
-  Based on Figure 9, there was only a single instance where the RNN model outperformed the MLP model, and this was for the ecstasy category. In this case, the sequential memory of the RNN allowed the layers to learn complicated interactions between the personality trait data that may have been overlooked using the MLP model. Overall, while the MLP remains the most computationally efficient and accurate of the two models evaluated, the RNN's step-by-step memory framework provided an advantage when isolating unique behavioral relationships within the data. 
+  Based on Figure 9, there was only a single instance where the RNN model outperformed the MLP model, and this was for the cocaine category. In this case, the sequential memory of the RNN allowed the layers to learn complicated interactions between the personality trait data that may have been overlooked using the MLP model. Overall, while the MLP remains the most computationally efficient and accurate of the two models evaluated, the RNN's step-by-step memory framework provided an advantage when isolating unique behavioral relationships within the data. 
 
 
 
@@ -815,8 +837,8 @@ ggplot(plot_data, aes(x = Drug, y = F1, fill = Model)) +
   
   The results of this study demonstrate that personality traits can be good indicators for substance usage risk when using ANN model frameworks, with an overall binary accuracy rate of approximately 82% for each model developed. The use of an adaptive threshold resulted in the best model accuracy and a subsequently balanced F1, precision, and recall scores however it is sensitive to extreme class imbalances for rare substances. Overall, we found that the risk of casting a broader net resulted in an inflated number of false positives. In the context of identifying at-risk individuals, we found the risk of a false positive to be less than the risk of a false negative.  
   
-  Ultimately, this study revealed that our MLP model is more efficient and generally more accurate for multi-label classification when compared to our RNN model. By evaluating all of the features simultaneously, the MLP was easily able to map correlations across the data. However, the RNN's success in the ecstasy category does validate the use of a "pseudo-sequential" feature extraction method, showing that an LSTM's step-by-step memory framework can provide an advantage when looking at rare and complex relationships within personality data. 
+  Ultimately, this study revealed that our MLP model is more efficient and generally more accurate for multi-label classification when compared to our RNN model. By evaluating all of the features simultaneously, the MLP was easily able to map correlations across the data. However, the RNN's success in the cocaine category does validate the use of a "pseudo-sequential" feature extraction method, showing that an LSTM's step-by-step memory framework can provide an advantage when looking at rare and complex relationships within personality data. 
   
-  The goal of this study was to determine drug use in a way that does not consider substances to be mutually exclusive. During the process of this study we found that individuals with certain personality traits may be more likely to gravitate towards a grouping of drugs, such as hallucinogens, or depressants. To further expand on this study, it may be beneficial to explore which substances are consistently indicated at the same rate and essentially group them by class to determine if the model performance can be improved using grouped substance classes instead of individual, mutually-exclusive drug targets. Additionally, the significant class imbalance observed within the dataset could be further mitigated using a synthetic data generation method, such as Synthetic Minority Over-Sampling (SMOTE). This could improve the overall performance of the models when handling the under-represented substances. 
+  The goal of this study was to determine drug use in a way that does not consider substances to be mutually exclusive. During the process of this study we found that individuals with certain personality traits may be more likely to gravitate towards a grouping of drugs, such as hallucinogens, or depressants. To further expand on this study, it may be beneficial to explore which substances are consistently indicated at the same rate and essentially group them by class to determine if the model performance can be improved using grouped substance classes instead of individual, mutually-exclusive drug targets. Additionally, the significant class imbalance observed within the dataset could be further mitigated using a synthetic data generation method, such as Synthetic Minority Over-Sampling (SMOTE).This could improve the overall performance of the models when handling the under-represented substances.  Additionally, the model struggled with the nicotine category as evidenced in the hit or miss heatmap (Figure 8), this was also the fourth most used substance in the dataset. Omission of nicotine could improve model performance with limited risk as it is not an illicit substance. 
 
 ## References
