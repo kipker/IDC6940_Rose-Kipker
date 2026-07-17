@@ -17,7 +17,7 @@ format:
           </style>
 course: Capstone Projects in Data Science
 bibliography: references.bib
-always_allow_html: true
+#always_allow_html: true
 self-contained: true
 execute: 
   warning: false
@@ -93,7 +93,51 @@ For both models, a dynamic threshold using the median predicted probability was 
 - Majority of respondents were from the UK (55.4%) and the US (29.5%)
 - Included fictitious drug "Semeron" as a validity check.
 
-################Include table 1????#####################
+## Variables
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+library(tibble)
+library(gt)
+
+# 1. Define the tibble first so R knows what it is
+variable_dictionary <- tibble(
+  `Variable Name` = c(
+    "nscore", "escore", "oscore", "ascore", "cscore", "impuslive", "ss",
+    "alcohol", "amphet", "amyl", "benzos", "caff", "cannabis", "choc",
+    "coke", "crack", "ecstasy", "heroin", "ketamine", "legalh", "lsd",
+    "meth", "mushrooms", "nicotine", "semer", "vsa"
+  ),
+  `Description` = c(
+    "Neuroticism score", "Extraversion score", "Openness to Experience score",
+    "Agreeableness score", "Conscientiousness score", "Impulsiveness (BIS-11) score",
+    "Sensation Seeking (ImpSS) score", "Alcohol usage frequency (1-7)",
+    "Amphetamine usage frequency (1-7)", "Amyl nitrite usage frequency (1-7)",
+    "Benzodiazepine usage frequency (1-7)", "Caffeine usage frequency (1-7)",
+    "Cannabis usage frequency (1-7)", "Chocolate usage frequency (1-7)",
+    "Cocaine usage frequency (1-7)", "Crack usage frequency (1-7)",
+    "Ecstasy usage frequency (1-7)", "Heroin usage frequency (1-7)",
+    "Ketamine usage frequency (1-7)", "Legal highs usage frequency (1-7)",
+    "LSD usage frequency (1-7)", "Methadone usage frequency (1-7)",
+    "Magic mushrooms usage frequency (1-7)", "Nicotine usage frequency (1-7)",
+    "Semeron (ficticious drug) usage frequency (1-7)", "Volatile Substance Abuse usage frequency (1-7)"
+  )
+)
+
+# 2. Now render the scrollable gt table
+variable_dictionary %>%
+  gt() %>%
+  cols_label(
+    `Variable Name` = md("**Variable Name**"),
+    Description = md("**Description**")
+  ) %>%
+  tab_options(
+    container.height = px(400), # Keeps the height constrained to slide limits
+    table.width = pct(100)
+  )
+```
 
 
 ## Data Exploration and Visualization {.smaller}
@@ -123,7 +167,7 @@ library(yardstick)
 
 ```
 
-```{r, warning=FALSE, echo=F}
+```{r, warning=FALSE, echo=F, message=FALSE}
 
 drug_data = fetch_ucirepo(id=373)
 data = drug_data$data$original
@@ -187,13 +231,13 @@ ggplot(imbalance_plot_data1, aes (x = reorder(Drug, Status == "User", FUN = sum)
 - Almost all respondents used chocolate, caffeine, and alcohol
 - To combat this, a composite score was used for the train/test split
 - Omitted 3 most common substances
-- For this study, we considered anyone that used a particular substance within the past year to be a "user"
+  - For this study, we considered anyone that used a particular substance within the past year to be a "user"
 
 
 ## Psychological footprints
 
-Similarities noticed between polygons- hints at correlation of substances
-```{r, warning=FALSE, echo=F}
+Similarities noticed between polygons hints at correlation of substances
+```{r, warning=FALSE, echo=F, message=FALSE}
 min_max_scale = function(x) {
   (x - min(x, na.rm = TRUE)) / (max(x, na.rm = TRUE) - min(x, na.rm = TRUE))
 }
@@ -270,7 +314,7 @@ p1 + p2
 ```
 
 ## 
-```{r, warning=FALSE, echo=F}
+```{r, warning=FALSE, echo=F, message=FALSE}
 drug_corr = cor(y_matrix) 
 diag(drug_corr) = 0 
 
@@ -319,27 +363,24 @@ ggplot(network_data, aes(x = x, y = y, xend = xend, yend = yend)) +
     legend.position = "right"
   )
 ```
-
-## Preprocessing 
-
-###Completed by original researchers: {.smaller}
+## Preprocessing {.smaller}
+#### Performed by original researchers:
 
 - Personality scores were quantified to continuous variables that approximate standard normal distribution 
 - Removal of incomplete/unusable respondent data
 - Removal of data from individuals that claimed "semeron" use
 
-###Completed prior to our study: {.smaller}
+#### Performed prior to our study:
 
 - Binarization of "users" vs. "non-users" for each substance
 - Removal of 3 most used substances (chocolate, caffeine, alcohol)
-- For RNN model: convered the 2D matrices (for MLP) into 3D arrays
+- For RNN model: converted the 2D matrices (for MLP) into 3D arrays
   - Created a sequential feature extractor 
-  
-
+ 
 
 ## The MLP
 
-```{r, warning=FALSE, echo=F}
+```{r, warning=FALSE, echo=F, message=FALSE}
 set.seed(10)
 
 # By using this method, individuals that use more than one drug will be evenly distributed
@@ -381,7 +422,7 @@ history = mlp_model %>% fit(
 plot(history)
 ```
 ## Hit or miss? 
-```{r}
+```{r, warning=FALSE, echo=F, message=FALSE}
 # Generate predicted probabilities
 
 all_probs = predict(mlp_model, X_test, verbose = 0)
@@ -449,7 +490,7 @@ ggplot(data = df_correct_subset, aes(x = Drug, y = factor(Participant), fill = C
 
 
 ## The RNN
-```{r}
+```{r, warning=FALSE, echo=F, message=FALSE}
 X_train_rnn = array_reshape(as.matrix(X_train), c(nrow(X_train), 7, 1))
 X_test_rnn = array_reshape(as.matrix(X_test), c(nrow(X_test), 7, 1))
 
@@ -483,9 +524,8 @@ plot(rnn_history)
 
 ## MLP vs RNN
 
-```{r}
+```{r, warning=FALSE, echo=F, message=FALSE}
 pred_probs = predict(mlp_model, X_test, verbose = 0)
-#summary(pred_probs)
 pred_binary = ifelse(pred_probs > 0.5, 1, 0)
 results = data.frame(truth = as.matrix(y_test, estimate = pred_binary))
 
@@ -495,12 +535,15 @@ eval_results_mlp = data.frame()
 for(i in 1:ncol(y_test)){
   drug_name = target_drugs[i]
   
-  # Using the median predicted probability for this specific drug
-  # alternative: use mean(pred_probs[, i])
-  current_threshold = median(pred_probs[, i]) 
+  # 1. Calculate the actual base rate (proportion of 1s in the ground truth)
+  actual_use_rate = mean(y_test[, i] == 1)
   
-  # Converting to binary using this column's unique threshold
-  binary_preds = ifelse(pred_probs[, i] > current_threshold, 1, 0)
+  # 2. Set the threshold so that ONLY the top percentage (matching the base rate) are predicted as 1s
+  # If 10% of people use a drug, the threshold is the 90th percentile (1 - 0.10)
+  current_threshold = quantile(pred_probs[, i], 1 - actual_use_rate) 
+  
+  # Converting to binary using this column's class-balanced threshold
+  binary_preds = ifelse(pred_probs[, i] >= current_threshold, 1, 0)
   
   truth_vec    = factor(y_test[, i], levels = c(0, 1))
   estimate_vec = factor(binary_preds, levels = c(0, 1))
@@ -512,7 +555,7 @@ for(i in 1:ncol(y_test)){
   
   eval_results_mlp = rbind(eval_results_mlp, data.frame(
     Drug = drug_name, 
-    Threshold = current_threshold, # tracked to see what was used
+    Threshold = as.numeric(current_threshold), # tracked to see what was used
     F1 = ifelse(is.na(f1), 0, f1),
     Precision = ifelse(is.na(prec), 0, prec),
     Recall = ifelse(is.na(rec), 0, rec)
@@ -520,7 +563,8 @@ for(i in 1:ncol(y_test)){
 }
 
 pred_probs_rnn = predict(rnn_model, X_test_rnn, verbose = 0)
-pred_binary_rnn = ifelse(pred_probs > 0.5, 1, 0)
+# Fixed typo: changed pred_probs to pred_probs_rnn
+pred_binary_rnn = ifelse(pred_probs_rnn > 0.5, 1, 0)
 results = data.frame(truth = as.matrix(y_test, estimate = pred_binary_rnn))
 
 # Calculating for each drug individually with dynamic thresholds
@@ -529,12 +573,14 @@ eval_results_rnn = data.frame()
 for(i in 1:ncol(y_test)){
   drug_name = target_drugs[i]
   
-  # Using the median predicted probability for this specific drug
-  # alternative: use mean(pred_probs[, i])
-  current_threshold = median(pred_probs_rnn[, i]) 
+  # 1. Calculate the actual base rate (proportion of 1s in the ground truth)
+  actual_use_rate = mean(y_test[, i] == 1)
   
-  # Converting to binary using this column's unique threshold
-  binary_preds = ifelse(pred_probs_rnn[, i] > current_threshold, 1, 0)
+  # 2. Set the threshold so that ONLY the top percentage (matching the base rate) are predicted as 1s
+  current_threshold = quantile(pred_probs_rnn[, i], 1 - actual_use_rate) 
+  
+  # Converting to binary using this column's class-balanced threshold
+  binary_preds = ifelse(pred_probs_rnn[, i] >= current_threshold, 1, 0)
   
   truth_vec    = factor(y_test[, i], levels = c(0, 1))
   estimate_vec = factor(binary_preds, levels = c(0, 1))
@@ -546,7 +592,7 @@ for(i in 1:ncol(y_test)){
   
   eval_results_rnn = rbind(eval_results_rnn, data.frame(
     Drug = drug_name, 
-    Threshold = current_threshold, # tracked to see what was used
+    Threshold = as.numeric(current_threshold), # tracked to see what was used
     F1 = ifelse(is.na(f1), 0, f1),
     Precision = ifelse(is.na(prec), 0, prec),
     Recall = ifelse(is.na(rec), 0, rec)
@@ -571,6 +617,6 @@ ggplot(plot_data, aes(x = Drug, y = F1, fill = Model)) +
 - Achieved overall binary accuracy rate of greater than 85% for both models
 - Using adaptive median threshold for classification caused precision to suffer, inflating number of false positives
 - MLP is overall more efficient/accurate for multi-label classification when compared to RNN
-- RNN able to model complex relationship between personality data (crack cocaine)
+- RNN able to model complex relationship between personality data (ecstasy)
 
 ## References
