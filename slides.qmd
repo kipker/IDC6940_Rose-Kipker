@@ -91,11 +91,11 @@ We will compare a traditional Artificial Neural Network, a multilayer perceptron
   
 ## Classification threshold  
   
-For both models, a dynamic threshold using the base use rate was used as our classification threshold.
+- For both models, a dynamic threshold using the base use rate was used as our classification threshold.
 
-e.g. if a drug had a use rate of 10% in the dataset, only the top 10% of predicted users will be given the class "1"
+- e.g. if a drug had a use rate of 10% in the dataset, only the top 10% of predicted users will be given the class "1"
 
-We also tried median and mean dynamic thresholds with less success
+- We also tried median and mean dynamic thresholds with less success
 
 
 ## Data Collection  {.smaller}
