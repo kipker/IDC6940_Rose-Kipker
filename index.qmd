@@ -583,7 +583,7 @@ for(i in 1:ncol(y_test)){
   
   # 2. Set the threshold so that ONLY the top percentage (matching the base rate) are predicted as 1s
   # If 10% of people use a drug, the threshold is the 90th percentile (1 - 0.10)
-  current_threshold = quantile(pred_probs[, i], 1 - actual_use_rate) 
+  current_threshold = actual_use_rate
   
   # Converting to binary using this column's class-balanced threshold
   binary_preds = ifelse(pred_probs[, i] >= current_threshold, 1, 0)
@@ -607,7 +607,7 @@ for(i in 1:ncol(y_test)){
 print(eval_results_mlp)
 
 ```
-The above table shows each drug, the threshold used for that drug, and the corresponding F1 score (grading how well the model predicted drug use), precision, and recall. A blanket predicted probability threshold of 0.5 (where probabilities over 0.5 were assigned class 1-user) was inappropriate for every drug. Some drugs probabilities capped out around 7%, thus all predicted instances would be 0 with the 50% threshold. Instead, a dynamic threshold was implemented where the base rate of susbstance use was used was used as the quantile above which the model classified a 'user'. For example, if the base rate of a substance use is 10%, then the 90th quartile is used as the threshold and only the top 10% of predicted users are categorized as a 1 (user). As expected, drugs with the lowest F1 scores also have the lowest precision, accuracy, and threshold, likely because they are more rare substances in use and therefore have the lowest occurrence and represent the classes most imbalanced (amyl, crack, and vsa). Because we balanced our prediction thresholds to match the exact base rate of each drug, the number of false positives equals false negatives, mathematically aligning our Precision, Recall, and F1 scores.
+The above table shows each drug, the threshold used for that drug, and the corresponding F1 score (grading how well the model predicted drug use), precision, and recall. A blanket predicted probability threshold of 0.5 (where probabilities over 0.5 were assigned class 1-user) was inappropriate for every drug. Some drugs probabilities capped out around 7%, thus all predicted instances would be 0 with the 50% threshold. Instead, a dynamic threshold was implemented where the base rate of susbstance use was used was used as the threshold for which the model classified a 'user'. For example, if the base rate of a substance use is 10%, and a prediction was given at 0.11, this was categorized as a 1 (user). As expected, drugs with the lowest F1 scores also have some of the lowest precision, accuracy, and threshold, likely because they are more rare substances in use and therefore have the lowest occurrence and represent the classes most imbalanced (amyl, crack, heroin, and ketamine).
 
 Additionally, we discovered that using the metric "accuracy" was misrepresenting of the performance of the model. The metric "accuracy" only grades the model positively if it correctly predicted ALL of the 15 target substances. If the model correctly predicted 14 out of the 15 substances, that was considered a model failure. As we are looking at prediction of each drug independently, we updated the metric of the model to "binary accuracy" which represents how many of the 15 drugs it predicts correctly for each instance in the data set. This model is performing at approaching 85% accuracy overall. 
 
@@ -630,7 +630,7 @@ for(i in 1:ncol(all_probs)) {
   actual_use_rate = mean(y_test_matrix[, drug_name]) 
   
   # 2. Find the corresponding percentile threshold (e.g., if use rate is 10%, threshold is the 90th percentile)
-  class_threshold = quantile(all_probs[, i], 1 - actual_use_rate)
+  class_threshold = actual_use_rate
   
   # 3. Classify based on this realistic, drug-specific threshold
   all_preds[, i] = ifelse(all_probs[, i] >= class_threshold, 1, 0)
@@ -681,7 +681,7 @@ ggplot(data = df_correct_subset, aes(x = Drug, y = factor(Participant), fill = C
     fill = "Model Outcome"
   )
 ```
-Figure 8 further illustrates how grading this model by getting all 15 drug predictions correct was driving down overall model accuracy and the binary accuracy is a much better description of model performance. This figure aligns with the approximately 85% accuracy for each instance rather than the overall accuracy of approximately 20% when the metric "accuracy" was used. 
+Figure 8 further illustrates how grading this model by getting all 15 drug predictions correct was driving down overall model accuracy and the binary accuracy is a much better description of model performance. This figure aligns with the approximately 80% accuracy average across instances rather than the overall accuracy of approximately 20% when the metric "accuracy" was used. 
 
   To explore how this model could be used in a clinical setting to identify "at risk" individuals, we constructed a synthetic profile of an imaginary respondent to the survey and examined how the model is able to predict the probability of drug usage across our 15 target substances. 
 
@@ -772,7 +772,7 @@ for(i in 1:ncol(y_test)){
   actual_use_rate = mean(y_test[, i] == 1)
   
   # 2. Set the threshold so that ONLY the top percentage (matching the base rate) are predicted as 1s
-  current_threshold = quantile(pred_probs_rnn[, i], 1 - actual_use_rate) 
+  current_threshold = actual_use_rate
   
   # Converting to binary using this column's class-balanced threshold
   binary_preds = ifelse(pred_probs_rnn[, i] >= current_threshold, 1, 0)
@@ -797,7 +797,7 @@ for(i in 1:ncol(y_test)){
 print(eval_results_rnn)
 
 ```
-  The table above shows the substances as well as their corresponding threshold, F1 score, precision, and recall. The same dynamic threshold that was implemented in our MLP model was used in this RNN model, which also shows the aligned F1, precision, and recall scores. For highly rare substances like amyl, our test set contained very few positive instances. Under the class-balanced threshold we are using for the MLP and RNN, incorrectly categorizing even a single actual user in our predictions drops our True Positives to zero, resulting in an F1 score of 0. This highlights how extremely imbalanced classes remain a significant challenge, even for complex architectures.
+  The table above shows the substances as well as their corresponding threshold, F1 score, precision, and recall. The same dynamic threshold that was implemented in our MLP model was used in this RNN model, which also shows the aligned F1, precision, and recall scores. For highly rare substances like amyl, our test set contained very few positive instances. Under the class-balanced threshold we are using for the MLP and RNN, incorrectly categorizing even a single actual user in our predictions can drop our True Positives to zero, resulting in an F1 score of 0. This highlights how extremely imbalanced classes remain a significant challenge, even for complex architectures.
 
 
 
@@ -814,16 +814,16 @@ plot_data = rbind(
   mutate(eval_results_rnn, Model = "RNN")
 )
 
-ggplot(plot_data, aes(x = Drug, y = F1, fill = Model)) +
+ggplot(plot_data, aes(x = Drug, y = Recall, fill = Model)) +
   geom_bar(stat = "identity", position = "dodge") +
   theme_minimal() +
-  labs(tag= "Figure 9", title = "F1-Score Comparison: MLP vs RNN", y = "F1 Score") +
+  labs(tag= "Figure 9", title = "Recall (sensitivity) Comparison: MLP vs RNN", y = "F1 Score") +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
   
-  As evident in Figure 9, the MLP model achieved a higher F1-score than the RNN model in 13 out of 15 drug categories, and the models exhibited roughly equivalent performance for 1 of the drug categories. These results support the argument that, for static data, traditional MLPs are more easily able to map correlations simultaneously across all features than an RNN. In this case, the RNN may have struggled due to the creation of an "artificial timeline" by forcing the LSTM layer to treat the features sequentially. This could have introduced excess noise and decreased the overall performance of the RNN model, even for drug categories that are well represented within the dataset. 
+  As evident in Figure 9, the MLP model achieved a higher recall than the RNN model in 14 out of 15 drug categories. These results support the argument that, for static data, traditional MLPs are more easily able to map correlations simultaneously across all features than an RNN. In this case, the RNN may have struggled due to the creation of an "artificial timeline" by forcing the LSTM layer to treat the features sequentially. This could have introduced excess noise and decreased the overall performance of the RNN model, even for drug categories that are well represented within the dataset. 
   
-  Based on Figure 9, there was only a single instance where the RNN model outperformed the MLP model, and this was for the cocaine category. In this case, the sequential memory of the RNN allowed the layers to learn complicated interactions between the personality trait data that may have been overlooked using the MLP model. Overall, while the MLP remains the most computationally efficient and accurate of the two models evaluated, the RNN's step-by-step memory framework provided an advantage when isolating unique behavioral relationships within the data. 
+  Based on Figure 9, there was one instance where the RNN model outperformed the MLP model, and this was for the cocaine category. In this case, the sequential memory of the RNN allowed the layers to learn complicated interactions between the personality trait data that may have been overlooked using the MLP model. Overall, while the MLP remains the most computationally efficient and accurate of the two models evaluated, the RNN's step-by-step memory framework provided an advantage when isolating unique behavioral relationships within the data. 
 
 
 

@@ -113,9 +113,7 @@ We will compare a traditional Artificial Neural Network, a multilayer perceptron
 ## Variables
 
 Personality trait and drug use features collected by Fehrman et al. [@fehrman2017five] via online survey
-```{r}
 
-```
 
 ```{r}
 #| echo: false
@@ -453,6 +451,8 @@ history = mlp_model %>% fit(
 )
 plot(history)
 ```
+
+
 ## Hit or miss? 
 ```{r, warning=FALSE, echo=F, message=FALSE}
 # Generate predicted probabilities
@@ -468,7 +468,7 @@ for(i in 1:ncol(all_probs)) {
   actual_use_rate = mean(y_test_matrix[, drug_name]) 
   
   # 2. Find the corresponding percentile threshold (e.g., if use rate is 10%, threshold is the 90th percentile)
-  class_threshold = quantile(all_probs[, i], 1 - actual_use_rate)
+  class_threshold = actual_use_rate
   
   # 3. Classify based on this realistic, drug-specific threshold
   all_preds[, i] = ifelse(all_probs[, i] >= class_threshold, 1, 0)
@@ -513,7 +513,7 @@ ggplot(data = df_correct_subset, aes(x = Drug, y = factor(Participant), fill = C
   labs(
     tag = "Figure 8",
     title = "Model Prediction Accuracy Matrix",
-    subtitle = "Ground Truth vs. MLP Binary Predictions (Column-Wise Median Thresholds)",
+    subtitle = "Ground Truth vs. MLP Binary Predictions (Column-Wise Base use rate Thresholds)",
     x = "Substance",
     y = "Participant ID",
     fill = "Model Outcome"
@@ -558,8 +558,6 @@ plot(rnn_history)
 
 ```{r, warning=FALSE, echo=F, message=FALSE}
 pred_probs = predict(mlp_model, X_test, verbose = 0)
-pred_binary = ifelse(pred_probs > 0.5, 1, 0)
-results = data.frame(truth = as.matrix(y_test, estimate = pred_binary))
 
 # Calculating for each drug individually with dynamic thresholds
 eval_results_mlp = data.frame()
@@ -572,7 +570,7 @@ for(i in 1:ncol(y_test)){
   
   # 2. Set the threshold so that ONLY the top percentage (matching the base rate) are predicted as 1s
   # If 10% of people use a drug, the threshold is the 90th percentile (1 - 0.10)
-  current_threshold = quantile(pred_probs[, i], 1 - actual_use_rate) 
+  current_threshold = actual_use_rate 
   
   # Converting to binary using this column's class-balanced threshold
   binary_preds = ifelse(pred_probs[, i] >= current_threshold, 1, 0)
@@ -609,8 +607,8 @@ for(i in 1:ncol(y_test)){
   actual_use_rate = mean(y_test[, i] == 1)
   
   # 2. Set the threshold so that ONLY the top percentage (matching the base rate) are predicted as 1s
-  current_threshold = quantile(pred_probs_rnn[, i], 1 - actual_use_rate) 
-  
+current_threshold = actual_use_rate
+
   # Converting to binary using this column's class-balanced threshold
   binary_preds = ifelse(pred_probs_rnn[, i] >= current_threshold, 1, 0)
   
@@ -636,11 +634,69 @@ plot_data = rbind(
   mutate(eval_results_rnn, Model = "RNN")
 )
 
-ggplot(plot_data, aes(x = Drug, y = F1, fill = Model)) +
+ggplot(plot_data, aes(x = Drug, y = Recall, fill = Model)) +
   geom_bar(stat = "identity", position = "dodge") +
   theme_minimal() +
-  labs(tag= "Figure 9", title = "F1-Score Comparison: MLP vs RNN", y = "F1 Score") +
+  labs(tag= "Figure 9", title = "Recall (sensitivity) Comparison: MLP vs RNN", y = "F1 Score") +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+## Confusion! 
+
+```{r confusion matrix}
+library(caret)
+
+# Assume 'y_pred_prob' is your matrix/array of predicted probabilities (N x 15)
+# and 'y_true' is your ground-truth binary matrix (N x 15)
+
+drug_names <- colnames(y_matrix)
+
+# 1. Compute dynamic threshold per drug based on base usage rate (prevalence)
+base_rates <- colMeans(y_matrix)
+
+cat("=== Dynamic Thresholds (Base Usage Rates) ===\n")
+print(round(base_rates, 4))
+cat("\n")
+
+y_pred_prob = predict(mlp_model, X_test,verbose=0)
+
+# 2. Binarize predictions using each drug's dynamic threshold
+y_pred_dynamic <- matrix(0, nrow = nrow(y_pred_prob), ncol = ncol(y_pred_prob))
+
+for (i in seq_along(drug_names)) {
+  # Threshold is set to the drug's base rate
+  thresh <- base_rates[i] 
+  y_pred_dynamic[, i] <- ifelse(y_pred_prob[, i] >= thresh, 1, 0)
+}
+
+# 3. Per-Drug Evaluation with Dynamic Thresholds
+for (i in seq_along(drug_names)) {
+  cat("\n========================================\n")
+  cat("Confusion Matrix for:", drug_names[i], "\n")
+  cat("Threshold used:", round(base_rates[i], 4), "\n")
+  cat("========================================\n")
+  
+  cm <- confusionMatrix(
+    factor(y_pred_dynamic[, i], levels = c(0, 1)), 
+    factor(y_test_matrix[, i], levels = c(0, 1)), 
+    positive = "1"
+  )
+  print(cm$table)
+  cat("Sensitivity (Recall):", round(cm$byClass["Sensitivity"], 4), "\n")
+  cat("Specificity:", round(cm$byClass["Specificity"], 4), "\n")
+  cat("Balanced Accuracy:", round(cm$byClass["Balanced Accuracy"], 4), "\n")
+}
+
+# 4. Overall Combined Confusion Matrix
+overall_cm <- confusionMatrix(
+  factor(as.vector(y_pred_dynamic), levels = c(0, 1)),
+  factor(as.vector(y_test_matrix), levels = c(0, 1)),
+  positive = "1"
+)
+
+cat("\n========================================\n")
+cat("Overall Model Performance (Dynamic Thresholds)\n")
+cat("========================================\n")
+print(overall_cm)
 ```
 
 ## Conclusion
