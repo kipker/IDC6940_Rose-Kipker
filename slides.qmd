@@ -93,9 +93,9 @@ We will compare a traditional Artificial Neural Network, a multilayer perceptron
   
 - For both models, a dynamic threshold using the base use rate was used as our classification threshold.
 
-- e.g. if a drug had a use rate of 10% in the dataset, only the top 10% of predicted users will be given the class "1"
+- e.g. if a drug had a use rate of 10% in the dataset and the predicted probability is .11, that is classified as a 1 (user)
 
-- We also tried median and mean dynamic thresholds with less success
+- We also tried median and mean dynamic thresholds with less success (lower recall and precision)
 
 
 ## Data Collection  {.smaller}
@@ -686,13 +686,17 @@ for (i in seq_along(drug_names)) {
   cat("Balanced Accuracy:", round(cm$byClass["Balanced Accuracy"], 4), "\n")
 }
 
+```
+
+## Combined confusion matrix
+
+```{r confusion combined}
 # 4. Overall Combined Confusion Matrix
 overall_cm <- confusionMatrix(
   factor(as.vector(y_pred_dynamic), levels = c(0, 1)),
   factor(as.vector(y_test_matrix), levels = c(0, 1)),
   positive = "1"
 )
-
 cat("\n========================================\n")
 cat("Overall Model Performance (Dynamic Thresholds)\n")
 cat("========================================\n")
@@ -703,7 +707,7 @@ print(overall_cm)
 
 - Personality traits can be good indicators for substance usage risk when using ANN model frameworks
 - Achieved overall binary accuracy rate of greater than 82% for both models
-- Using adaptive median threshold for classification caused precision to suffer, inflating number of false positives, improved with base use threshold
+- Using adaptive base use rate threshold for classification caused precision to suffer, inflating number of false positives, improved with base use threshold
 - MLP is overall more efficient/accurate for multi-label classification when compared to RNN
 - RNN able to model complex relationships between personality data (cocaine)
 

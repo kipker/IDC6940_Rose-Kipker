@@ -675,13 +675,13 @@ ggplot(data = df_correct_subset, aes(x = Drug, y = factor(Participant), fill = C
   labs(
     tag = "Figure 8",
     title = "Model Prediction Accuracy Matrix",
-    subtitle = "Ground Truth vs. MLP Binary Predictions (Column-Wise Median Thresholds)",
+    subtitle = "Ground Truth vs. MLP Predictions (Column-Wise Base Use Rate Thresholds)",
     x = "Substance",
     y = "Participant ID",
     fill = "Model Outcome"
   )
 ```
-Figure 8 further illustrates how grading this model by getting all 15 drug predictions correct was driving down overall model accuracy and the binary accuracy is a much better description of model performance. This figure aligns with the approximately 80% accuracy average across instances rather than the overall accuracy of approximately 20% when the metric "accuracy" was used. 
+Figure 8 further illustrates how grading this model by getting all 15 drug predictions correct was driving down overall model accuracy and the binary accuracy is a much better description of model performance. This figure aligns with the approximately 80% accuracy average across instances rather than the overall accuracy of approximately 20% when the metric "accuracy" was used. While there is quite a bit of red on this figure, this represents a large quantitiy of false positive results. This type of error in this setting is the lower risk (we would rather identify someone as an at risk for substance abuse individual than miss someone that should have been identified). For this reason, we prioritized the metric of recall, or specificity.  
 
   To explore how this model could be used in a clinical setting to identify "at risk" individuals, we constructed a synthetic profile of an imaginary respondent to the survey and examined how the model is able to predict the probability of drug usage across our 15 target substances. 
 
@@ -803,7 +803,7 @@ print(eval_results_rnn)
 
 ### Comparing Effectiveness of MLP and RNN Models 
 
-  To directly compare the effectiveness of the MLP and RNN models, the F1-scores for each model were plotted side-by-side across each of the 15 non-mutually exclusive substances in Figure 9. Since both models used an adaptive threshold to help combat class imbalance observed in the dataset, we are able to compare the F1-scores to evaluate how effectively each model could predict drug usage based on personality type information. 
+  To directly compare the effectiveness of the MLP and RNN models, the recall values for each model were plotted side-by-side across each of the 15 non-mutually exclusive substances in Figure 9. Since both models used an adaptive threshold to help combat class imbalance observed in the dataset, we are able to compare the scores to evaluate how effectively each model could predict drug usage based on personality type information. 
 
 ```{r}
 library(ggplot2)
@@ -837,7 +837,7 @@ ggplot(plot_data, aes(x = Drug, y = Recall, fill = Model)) +
   
   The results of this study demonstrate that personality traits can be good indicators for substance usage risk when using ANN model frameworks, with an overall binary accuracy rate of approximately 82% for each model developed. The use of an adaptive threshold resulted in the best model accuracy and a subsequently balanced F1, precision, and recall scores however it is sensitive to extreme class imbalances for rare substances. Overall, we found that the risk of casting a broader net resulted in an inflated number of false positives. In the context of identifying at-risk individuals, we found the risk of a false positive to be less than the risk of a false negative.  
   
-  Ultimately, this study revealed that our MLP model is more efficient and generally more accurate for multi-label classification when compared to our RNN model. By evaluating all of the features simultaneously, the MLP was easily able to map correlations across the data. However, the RNN's success in the cocaine category does validate the use of a "pseudo-sequential" feature extraction method, showing that an LSTM's step-by-step memory framework can provide an advantage when looking at rare and complex relationships within personality data. 
+  Ultimately, this study revealed that our MLP model is more efficient and generally more accurate for multi-label classification when compared to our RNN model. By evaluating all of the features simultaneously, the MLP was easily able to map correlations across the data. However, the RNN's success in the cocaine category does validate the use of a "pseudo-sequential" feature extraction method, showing that an LSTM's step-by-step memory framework can provide an advantage when looking at rare and complex relationships within personality data. Additionally, without setting a seed, the model would often show that the RNN could outperform the MLP for other drugs, suggesting that both models perform equally well and given the run through the dataset, the MLP or the RNN would produce concordant results. 
   
   The goal of this study was to determine drug use in a way that does not consider substances to be mutually exclusive. During the process of this study we found that individuals with certain personality traits may be more likely to gravitate towards a grouping of drugs, such as hallucinogens, or depressants. To further expand on this study, it may be beneficial to explore which substances are consistently indicated at the same rate and essentially group them by class to determine if the model performance can be improved using grouped substance classes instead of individual, mutually-exclusive drug targets. Additionally, the significant class imbalance observed within the dataset could be further mitigated using a synthetic data generation method, such as Synthetic Minority Over-Sampling (SMOTE).This could improve the overall performance of the models when handling the under-represented substances.  Additionally, the model struggled with the nicotine category as evidenced in the hit or miss heatmap (Figure 8), this was also the fourth most used substance in the dataset. Omission of nicotine could improve model performance with limited risk as it is not an illicit substance. 
 
